@@ -3,7 +3,7 @@ import { User, Edit3, Settings, Shield, Activity, Calendar, Mail, Phone, MapPin,
 import useAuthStore from '../Store/authStore';
 import { useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../api/axiosInstance';
 
 export default function Profile() {
   const { user, logout } = useAuthStore();
@@ -38,7 +38,7 @@ export default function Profile() {
 
   const handleSubmit = async () => {
     try {
-      await axios.put('http://localhost:3000/api/users/me', formData, { withCredentials: true });
+      await axios.put('/users/me', formData);
 
       alert('Profile updated!');
     } catch (err) {
