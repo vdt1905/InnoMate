@@ -24,7 +24,7 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: ['https://innomate.vercel.app','http://localhost:3000', 'http://localhost:5173'],
+    origin: ['https://innomate.vercel.app', 'http://localhost:3000', 'http://localhost:5173'],
     credentials: true,
   }
 });
@@ -33,7 +33,7 @@ const io = new Server(server, {
 socketHandler(io);
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: ['https://innomate.vercel.app', 'http://localhost:3000', 'http://localhost:5173', process.env.CLIENT_URL],
   credentials: true,
 }));
 
