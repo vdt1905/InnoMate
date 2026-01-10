@@ -16,6 +16,8 @@ import { socketHandler } from './socket/socketHandler.js';
 
 dotenv.config();
 const PORT = process.env.PORT || 5000;
+console.log("Current NODE_ENV:", process.env.NODE_ENV);
+console.log("Starting server on PORT:", PORT);
 const app = express();
 
 // Create HTTP server
@@ -52,7 +54,9 @@ app.use(errorHandler);
 
 
 // Conditional listen for local development
-if (process.env.NODE_ENV !== 'production') {
+// Conditional listen for local development (and local production test)
+// Only skip this if we are strictly on Vercel (VERCEL=1)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   connectDB().then(() => {
     server.listen(PORT, () => {
       console.log(`🚀 Server (Socket.io) is running on http://localhost:${PORT}`);
