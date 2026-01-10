@@ -2,6 +2,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useAuthStore from '../Store/authStore';
 import React, { useState } from 'react';
+import { Search } from 'lucide-react';
 
 const Navbar = () => {
   const { logout, user } = useAuthStore();
@@ -20,13 +21,18 @@ const Navbar = () => {
       )
     },
     {
-      path: '/profile',
+      path: user ? `/${user.username}` : '/login',
       label: 'Profile',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       )
+    },
+    {
+      path: '/search-peers',
+      label: 'Find Peers',
+      icon: <Search className="w-5 h-5" />
     },
     {
       path: '/allideas',
@@ -38,8 +44,8 @@ const Navbar = () => {
       )
     },
     {
-      path: '/settings',
-      label: 'Settings',
+      path: '/myteams',
+      label: 'Myteams',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -65,7 +71,7 @@ const Navbar = () => {
 
   return (
     <div className={`${isCollapsed ? 'w-20' : 'w-72'} transition-all duration-300 ease-in-out h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-700/50 shadow-2xl flex flex-col sticky top-0 left-0 overflow-hidden`}>
-      
+
       {/* Header with Collapse Toggle */}
       <div className="p-6 border-b border-gray-700/50 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -82,7 +88,7 @@ const Navbar = () => {
               </div>
             )}
           </div>
-          
+
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-2 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-white transition-all duration-200 flex-shrink-0"
@@ -113,14 +119,14 @@ const Navbar = () => {
             >
               <div className={`
                 flex-shrink-0 transition-all duration-300
-                ${isActiveLink(item.path) 
-                  ? 'text-purple-400 scale-110' 
+                ${isActiveLink(item.path)
+                  ? 'text-purple-400 scale-110'
                   : 'text-gray-500 group-hover:text-gray-300 group-hover:scale-105'
                 }
               `}>
                 {item.icon}
               </div>
-              
+
               {!isCollapsed && (
                 <>
                   <span className="font-medium tracking-wide ml-3 truncate">{item.label}</span>
@@ -131,7 +137,7 @@ const Navbar = () => {
                   )}
                 </>
               )}
-              
+
               {isCollapsed && isActiveLink(item.path) && (
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
@@ -146,7 +152,7 @@ const Navbar = () => {
           <div className="mt-8 pt-6 border-t border-gray-700/50">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">Quick Actions</p>
             <div className="space-y-2">
-              <button 
+              <button
                 onClick={handleNewProject}
                 className="w-full flex items-center px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200 text-sm group"
               >
@@ -155,7 +161,7 @@ const Navbar = () => {
                 </svg>
                 <span className="truncate">New Project</span>
               </button>
-              <button 
+              <button
                 onClick={handleSupport}
                 className="w-full flex items-center px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200 text-sm group"
               >
@@ -172,7 +178,7 @@ const Navbar = () => {
         {isCollapsed && (
           <div className="mt-8 pt-6 border-t border-gray-700/50">
             <div className="space-y-2 flex flex-col items-center">
-              <button 
+              <button
                 onClick={handleNewProject}
                 className="p-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200 group"
                 title="New Project"
@@ -181,7 +187,7 @@ const Navbar = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </button>
-              <button 
+              <button
                 onClick={handleSupport}
                 className="p-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200 group"
                 title="Support"
@@ -228,8 +234,8 @@ const Navbar = () => {
             </div>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={logout}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-center px-4'} py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all duration-300 group`}
           title={isCollapsed ? 'Sign Out' : ''}

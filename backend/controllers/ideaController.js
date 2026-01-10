@@ -1,5 +1,6 @@
 import { Idea } from '../models/Idea.js';
 import { User } from '../models/user.model.js';
+import { Message } from '../models/Message.js';
 
 export const createIdea = async (req, res) => {
   try {
@@ -147,7 +148,7 @@ export const getPersonalizedFeed = async (req, res) => {
     const userSkills = req.user.skills.map(skill => skill.toLowerCase());
 
     const allIdeas = await Idea.find().populate('createdBy', 'name username avatar')
-     .populate('comments.user', 'name username avatar');
+      .populate('comments.user', 'name username avatar');
 
     const scoredIdeas = allIdeas.map(idea => {
       const ideaSkills = idea.skillsRequired.map(s => s.toLowerCase());
@@ -234,7 +235,7 @@ export const updateIdea = async (req, res) => {
     console.error(err);
     res.status(500).json({ message: 'Error updating idea' });
   }
-};  
+};
 
 // @desc Delete idea (only by creator)
 export const deleteIdea = async (req, res) => {
@@ -317,12 +318,109 @@ export const getIdeasByUser = async (req, res) => {
   try {
     const ideas = await Idea.find({ createdBy: req.params.userId })
       .sort({ createdAt: -1 })
-      .populate('createdBy', 'username name avatar');
+      .populate('createdBy', 'username name avatar')
+      .populate('teamMembers', 'name username avatar'); // 👈 add this
+
     res.status(200).json(ideas);
   } catch (err) {
     console.error('Error fetching user ideas:', err);
     res.status(500).json({ message: 'Failed to fetch user ideas' });
   }
 };
+
+export const getTeamDetails = async (req, res) => {
+  try {
+    const idea = await Idea.findById(req.params.id)
+      .populate('createdBy', 'name username email avatar') // Include email
+      .populate('teamMembers', 'name username email avatar') // Include email
+      .populate('comments.user', 'name username avatar');
+
+    if (!idea) return res.status(404).json({ message: 'Project not found' });
+
+    // Security Check: User must be Owner OR Member
+    const isOwner = idea.createdBy._id.toString() === req.user._id.toString();
+    const isMember = idea.teamMembers.some(member => member._id.toString() === req.user._id.toString());
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: 'Access denied: Team members only' });
+    }
+
+    res.status(200).json(idea);
+  } catch (err) {
+    console.error('Error fetching team details:', err);
+    res.status(500).json({ message: 'Failed to load team dashboard' });
+  }
+};
+
+export const getTeamMessages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const messages = await Message.find({ teamId: id }).sort({ createdAt: 1 });
+    res.status(200).json(messages);
+  } catch (err) {
+    console.error('Error fetching messages:', err);
+    res.status(500).json({ message: 'Failed to fetch messages' });
+  }
+};
+
+export const removeMember = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const idea = await Idea.findById(id);
+
+    if (!idea) return res.status(404).json({ message: 'Idea not found' });
+
+    // Check if requester is owner
+    if (idea.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the project lead can remove members' });
+    }
+
+    // Remove member
+    idea.teamMembers = idea.teamMembers.filter(
+      (memberId) => memberId.toString() !== userId
+    );
+
+    await idea.save();
+    res.status(200).json({ message: 'Member removed successfully', teamMembers: idea.teamMembers });
+  } catch (err) {
+    console.error('Error removing member:', err);
+    res.status(500).json({ message: 'Failed to remove member' });
+  }
+};
+
+export const leaveTeam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const idea = await Idea.findById(id);
+
+    if (!idea) return res.status(404).json({ message: 'Idea not found' });
+
+    // Check if requester is actually a member
+    const isMember = idea.teamMembers.some(
+      (memberId) => memberId.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(400).json({ message: 'You are not a member of this team' });
+    }
+
+    // Owner cannot leave
+    if (idea.createdBy.toString() === req.user._id.toString()) {
+      return res.status(400).json({ message: 'Project lead cannot leave the team.' });
+    }
+
+    // Remove self
+    idea.teamMembers = idea.teamMembers.filter(
+      (memberId) => memberId.toString() !== req.user._id.toString()
+    );
+
+    await idea.save();
+    res.status(200).json({ message: 'You have left the team', teamMembers: idea.teamMembers });
+  } catch (err) {
+    console.error('Error leaving team:', err);
+    res.status(500).json({ message: 'Failed to leave team' });
+  }
+};
+
 
 

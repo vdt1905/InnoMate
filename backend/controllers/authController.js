@@ -13,17 +13,17 @@ export const register = async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-  const user = await User.create({ username, name, email, password, verificationToken });
+
+  const user = await User.create({ username, name, email, password });
 
   const token = generateToken(user._id);
 
   res.cookie('token', token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
 
   res.status(201).json({ user });
@@ -41,11 +41,11 @@ export const login = async (req, res) => {
   const token = generateToken(user._id);
 
   res.cookie('token', token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
 
   res.status(200).json({ user });
@@ -60,3 +60,6 @@ export const logout = (req, res) => {
   });
   res.status(200).json({ message: 'Logged out' });
 };
+
+
+

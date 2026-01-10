@@ -4,14 +4,18 @@ import {
   toggleLikeIdea,
   addComment,
   deleteComment,
-  joinTeam,getPersonalizedFeed,
+  joinTeam, getPersonalizedFeed,
   getAllIdeas,
   getIdeaById,
   updateIdea,
   deleteIdea,
   searchIdeas,
   recommendTeammates,
-  getIdeasByUser
+  getIdeasByUser,
+  getTeamDetails,
+  getTeamMessages,
+  removeMember,
+  leaveTeam
 } from '../controllers/ideaController.js';
 
 import {
@@ -20,7 +24,8 @@ import {
   acceptJoinRequest,
   rejectJoinRequest,
   getJoinRequestStatus,
-  
+  getUserTeams
+
 } from '../controllers/joinRequestController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -39,6 +44,12 @@ router.put('/:id', protect, updateIdea);      // Update idea
 router.delete('/:id', protect, deleteIdea);   // Delete idea
 router.get('/:id/recommend', protect, recommendTeammates);
 router.get('/user/:userId', protect, getIdeasByUser); // ✅ New route
+router.get('/:id/dashboard', protect, getTeamDetails); // 🔒 Secure Team Dashboard
+router.get('/:id/messages', protect, getTeamMessages); // 💬 Chat History
+
+// Membership Management
+router.put('/:id/members/:userId/remove', protect, removeMember);
+router.put('/:id/leave', protect, leaveTeam);
 
 
 router.post('/:id/join-request', protect, sendJoinRequest);
@@ -46,6 +57,7 @@ router.get('/:id/requests', protect, getJoinRequests);
 router.put('/:id/requests/:requestId/accept', protect, acceptJoinRequest);
 router.put('/:id/requests/:requestId/reject', protect, rejectJoinRequest);
 router.get('/:ideaId/join-request/status', protect, getJoinRequestStatus);
+router.get('/teams/mine', protect, getUserTeams);
 
 
 

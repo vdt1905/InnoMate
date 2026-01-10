@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from '../Store/authStore';
+import { useNavigate } from 'react-router-dom';
 import {
   Heart,
   MessageCircle,
@@ -24,6 +25,7 @@ import {
 import React from 'react';
 
 const Home = () => {
+  const navigate = useNavigate();
   const {
     getPersonalizedFeed,
     personalizedFeed,
@@ -42,8 +44,9 @@ const Home = () => {
   const [likingStates, setLikingStates] = useState({});
   const [commentTexts, setCommentTexts] = useState({});
   const [commentingStates, setCommentingStates] = useState({});
-  const [selectedIdea, setSelectedIdea] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const isModalOpen = false;
+  const selectedIdea = null;
+
 
   // Check if likeIdea function exists
   if (!toggleLikeIdea || typeof toggleLikeIdea !== 'function') {
@@ -79,14 +82,7 @@ const Home = () => {
 
   // Handle viewing details
   const handleViewDetails = (idea) => {
-    setSelectedIdea(idea);
-    setIsModalOpen(true);
-  };
-
-  // Close modal
-  const closeModal = () => {
-    setSelectedIdea(null);
-    setIsModalOpen(false);
+    navigate(`/project/${idea._id}`);
   };
 
   useEffect(() => {
@@ -274,11 +270,11 @@ const Home = () => {
                   {isFilterOpen && (
                     <>
                       {/* Backdrop to close dropdown when clicking outside */}
-                      <div 
-                        className="fixed inset-0 z-30" 
+                      <div
+                        className="fixed inset-0 z-30"
                         onClick={() => setIsFilterOpen(false)}
                       />
-                      
+
                       {/* Dropdown Menu */}
                       <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
                         {[
@@ -311,7 +307,7 @@ const Home = () => {
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 focus:bg-white/10 transition-all duration-200 appearance-none cursor-pointer"
-                    style={{ 
+                    style={{
                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
                       backgroundPosition: 'right 0.75rem center',
                       backgroundRepeat: 'no-repeat',
@@ -493,8 +489,8 @@ const Home = () => {
                           onClick={() => handleLike(idea._id)}
                           disabled={likingStates[idea._id] || !user?._id}
                           className={`flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden ${isLikedByUser(idea)
-                              ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 shadow-lg shadow-red-500/10'
-                              : 'bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 border border-white/10 hover:border-red-500/30'
+                            ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 shadow-lg shadow-red-500/10'
+                            : 'bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 border border-white/10 hover:border-red-500/30'
                             } ${likingStates[idea._id] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${!user?._id ? 'cursor-not-allowed opacity-30' : ''}`}
                         >
                           {likingStates[idea._id] ? (
@@ -560,11 +556,10 @@ const Home = () => {
                                 <button
                                   onClick={() => handlePostComment(idea._id)}
                                   disabled={commentingStates[idea._id] || !commentTexts[idea._id]?.trim()}
-                                  className={`px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg hover:from-violet-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all duration-200 font-medium text-sm flex items-center space-x-2 ${
-                                    commentingStates[idea._id] || !commentTexts[idea._id]?.trim() 
-                                      ? 'opacity-50 cursor-not-allowed' 
-                                      : 'cursor-pointer'
-                                  }`}
+                                  className={`px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg hover:from-violet-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all duration-200 font-medium text-sm flex items-center space-x-2 ${commentingStates[idea._id] || !commentTexts[idea._id]?.trim()
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : 'cursor-pointer'
+                                    }`}
                                 >
                                   {commentingStates[idea._id] ? (
                                     <>
@@ -651,7 +646,7 @@ const Home = () => {
                       </span>
                     </div>
                   </div>
-                  
+
                   <p className="text-gray-300 text-lg leading-relaxed">
                     {selectedIdea.description}
                   </p>
@@ -679,11 +674,10 @@ const Home = () => {
                       {selectedIdea.skillsRequired.map((skill, index) => (
                         <span
                           key={index}
-                          className={`px-4 py-2 text-sm font-medium rounded-xl border ${
-                            user?.skills?.includes(skill)
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                              : 'bg-white/5 text-gray-300 border-white/10'
-                          }`}
+                          className={`px-4 py-2 text-sm font-medium rounded-xl border ${user?.skills?.includes(skill)
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-white/5 text-gray-300 border-white/10'
+                            }`}
                         >
                           {skill}
                           {user?.skills?.includes(skill) && <span className="ml-2">✓</span>}
@@ -754,11 +748,10 @@ const Home = () => {
                   <button
                     onClick={() => handleLike(selectedIdea._id)}
                     disabled={likingStates[selectedIdea._id] || !user?._id}
-                    className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                      isLikedByUser(selectedIdea)
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                        : 'bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 border border-white/10'
-                    }`}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${isLikedByUser(selectedIdea)
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 border border-white/10'
+                      }`}
                   >
                     <Heart className={`w-5 h-5 ${isLikedByUser(selectedIdea) ? 'fill-current' : ''}`} />
                     <span>Like ({selectedIdea.likes?.length || 0})</span>

@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { User, Edit3, Settings, Shield, Activity, Calendar, Mail, Phone, MapPin, Award, TrendingUp, Clock, Database, Camera } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function Profile() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
-  const { detailedUser, getDetailedUser, loading } = useAuthStore();
+  const { detailedUser, getDetailedUser, getUserByUsername, loading } = useAuthStore();
+  const { username } = useParams();
+  const isOwnProfile = !username || (user && user.username === username);
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
@@ -51,8 +54,12 @@ export default function Profile() {
   } = useAuthStore();
 
   useEffect(() => {
-    getDetailedUser();
-  }, []);
+    if (username) {
+      getUserByUsername(username);
+    } else {
+      getDetailedUser();
+    }
+  }, [username]);
 
   useEffect(() => {
     if (detailedUser?._id) {
@@ -149,9 +156,11 @@ export default function Profile() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
-    { id: 'activity', label: 'Activity', icon: Activity },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'security', label: 'Security', icon: Shield }
+    ...(isOwnProfile ? [
+      { id: 'activity', label: 'Activity', icon: Activity },
+      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'security', label: 'Security', icon: Shield }
+    ] : [])
   ];
 
   const achievements = [
@@ -201,9 +210,11 @@ export default function Profile() {
               <div className="w-40 h-40 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
                 <User className="w-20 h-20 text-white" />
               </div>
-              <button className="absolute -bottom-3 -right-3 w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full flex items-center justify-center border-4 border-gray-800 shadow-lg transition-all duration-300 group">
-                <Camera className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-200" />
-              </button>
+              {isOwnProfile && (
+                <button className="absolute -bottom-3 -right-3 w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full flex items-center justify-center border-4 border-gray-800 shadow-lg transition-all duration-300 group">
+                  <Camera className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-200" />
+                </button>
+              )}
             </div>
 
             {/* Profile Info */}
@@ -710,12 +721,16 @@ export default function Profile() {
       </div>
     );
   };
+
+
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
         return renderOverview();
       case 'activity':
         return renderActivity();
+
       case 'settings':
         return <div className="text-white text-center py-12">Settings panel coming soon...</div>;
       case 'security':
@@ -754,8 +769,8 @@ export default function Profile() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === tab.id
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                     }`}
                 >
                   <Icon className="w-4 h-4" />

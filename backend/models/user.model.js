@@ -8,8 +8,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   skills: [String],
   bio: String,
-  isVerified: { type: Boolean, default: false },
-  verificationToken: String,
+  bio: String,
   socialLinks: {
   github: { type: String, default: '' },
   linkedin: { type: String, default: '' },

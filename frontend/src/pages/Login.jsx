@@ -12,19 +12,19 @@ export default function Login() {
   const { login, loading, error } = useAuthStore();
 
   // Mock store and navigate for demo - replace with your actual imports
-  
+
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  await login(form); // or register(form)
-  navigate('/dashboard');
-};
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await login(form); // or register(form)
+    navigate('/home');
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -55,7 +55,7 @@ const handleSubmit = async (e) => {
       {/* Lightweight Background Animations */}
       <div className="absolute inset-0">
         {/* Animated gradient overlay */}
-        <div 
+        <div
           className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-pink-900/10 to-cyan-900/20 opacity-50"
           style={{
             transform: `translate(${mousePosition.x * 10}px, ${mousePosition.y * 10}px)`
@@ -75,11 +75,10 @@ const handleSubmit = async (e) => {
                 animationDelay: `${i * 0.6}s`
               }}
             >
-              <div className={`${
-                i % 4 === 0 ? 'w-6 h-6 bg-purple-500' : 
-                i % 4 === 1 ? 'w-8 h-8 bg-pink-500' : 
-                i % 4 === 2 ? 'w-5 h-5 bg-cyan-500' : 'w-7 h-7 bg-violet-500'
-              } rounded-full blur-sm shadow-lg`}></div>
+              <div className={`${i % 4 === 0 ? 'w-6 h-6 bg-purple-500' :
+                  i % 4 === 1 ? 'w-8 h-8 bg-pink-500' :
+                    i % 4 === 2 ? 'w-5 h-5 bg-cyan-500' : 'w-7 h-7 bg-violet-500'
+                } rounded-full blur-sm shadow-lg`}></div>
             </div>
           ))}
         </div>
@@ -97,16 +96,15 @@ const handleSubmit = async (e) => {
                 animationDelay: `${i * 0.4}s`
               }}
             >
-              <div className={`w-2 h-2 ${
-                i % 2 === 0 ? 'bg-white' : 'bg-purple-300'
-              } rounded-full`}></div>
+              <div className={`w-2 h-2 ${i % 2 === 0 ? 'bg-white' : 'bg-purple-300'
+                } rounded-full`}></div>
             </div>
           ))}
         </div>
 
         {/* Subtle grid lines */}
         <div className="absolute inset-0 opacity-5">
-          <div 
+          <div
             className="w-full h-full"
             style={{
               backgroundImage: 'linear-gradient(rgba(147, 51, 234, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 51, 234, 0.1) 1px, transparent 1px)',
@@ -126,10 +124,10 @@ const handleSubmit = async (e) => {
       <div className="relative z-10 w-full max-w-md">
         {/* Simple glow effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-cyan-600/20 rounded-2xl blur-xl"></div>
-        
+
         {/* Enhanced Card container with glow animation */}
-        <div className="relative bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl" 
-             style={{ animation: 'pulse-glow 4s ease-in-out infinite' }}>
+        <div className="relative bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl"
+          style={{ animation: 'pulse-glow 4s ease-in-out infinite' }}>
           {/* Header */}
           <div className="p-8 pb-6 text-center">
             <User className="w-12 h-12 mx-auto text-white mb-4" />
@@ -154,9 +152,8 @@ const handleSubmit = async (e) => {
             {/* Email field */}
             <div className="relative mt-8">
               <div className="relative">
-                <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${
-                  focusedField === 'email' ? 'text-purple-400' : 'text-gray-500'
-                }`} />
+                <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${focusedField === 'email' ? 'text-purple-400' : 'text-gray-500'
+                  }`} />
                 <input
                   name="email"
                   type="email"
@@ -166,17 +163,15 @@ const handleSubmit = async (e) => {
                   onBlur={() => setFocusedField(null)}
                   onKeyDown={handleKeyDown}
                   placeholder=" "
-                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${
-                    focusedField === 'email' 
-                      ? 'border-purple-500/50 bg-purple-500/5' 
+                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'email'
+                      ? 'border-purple-500/50 bg-purple-500/5'
                       : 'border-gray-600/50 hover:border-gray-500/70'
-                  }`}
+                    }`}
                 />
-                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${
-                  focusedField === 'email' || form.email ? 
-                  'text-xs text-purple-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' : 
-                  'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-purple-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
-                }`}>
+                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${focusedField === 'email' || form.email ?
+                    'text-xs text-purple-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' :
+                    'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-purple-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
+                  }`}>
                   Email Address
                 </label>
               </div>
@@ -185,9 +180,8 @@ const handleSubmit = async (e) => {
             {/* Password field */}
             <div className="relative mt-8">
               <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${
-                  focusedField === 'password' ? 'text-cyan-400' : 'text-gray-500'
-                }`} />
+                <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${focusedField === 'password' ? 'text-cyan-400' : 'text-gray-500'
+                  }`} />
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -197,17 +191,15 @@ const handleSubmit = async (e) => {
                   onBlur={() => setFocusedField(null)}
                   onKeyDown={handleKeyDown}
                   placeholder=" "
-                  className={`w-full pl-12 pr-12 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${
-                    focusedField === 'password' 
-                      ? 'border-cyan-500/50 bg-cyan-500/5' 
+                  className={`w-full pl-12 pr-12 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'password'
+                      ? 'border-cyan-500/50 bg-cyan-500/5'
                       : 'border-gray-600/50 hover:border-gray-500/70'
-                  }`}
+                    }`}
                 />
-                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${
-                  focusedField === 'password' || form.password ? 
-                  'text-xs text-cyan-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' : 
-                  'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-cyan-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
-                }`}>
+                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${focusedField === 'password' || form.password ?
+                    'text-xs text-cyan-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' :
+                    'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-cyan-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
+                  }`}>
                   Password
                 </label>
                 <button
@@ -246,7 +238,7 @@ const handleSubmit = async (e) => {
             <div className="text-center pt-4">
               <p className="text-gray-400 text-sm">
                 Need access?{' '}
-                <button type="button" className="text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                <button type="button" onClick={() => navigate('/register')} className="text-purple-400 hover:text-purple-300 transition-colors duration-200">
                   Request Portal
                 </button>
               </p>

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Sparkles, Users, Calendar, Star, ArrowRight, Code, Hash, TrendingUp, Clock } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { getPersonalizedFeed, personalizedFeed, loadingFeed } = useAuthStore();
-  
+
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
@@ -19,13 +21,13 @@ const Dashboard = () => {
   const filteredProjects = personalizedFeed
     .filter(project => {
       const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           project.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        project.description.toLowerCase().includes(searchTerm.toLowerCase());
+
       if (filterBy === 'all') return matchesSearch;
       if (filterBy === 'high-match') return matchesSearch && project.matchScore >= 80;
       if (filterBy === 'hackathon') return matchesSearch && project.projectType === 'hackathon';
       if (filterBy === 'normal') return matchesSearch && project.projectType === 'normal';
-      
+
       return matchesSearch;
     })
     .sort((a, b) => {
@@ -52,7 +54,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Header Section */}
         <div className="mb-12">
           <div className="text-center mb-8">
@@ -72,7 +74,7 @@ const Dashboard = () => {
           {/* Search and Filter Section - Fixed positioning issues */}
           <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 relative">
             <div className="flex flex-col lg:flex-row gap-4 items-center">
-              
+
               {/* Search Bar */}
               <div className="flex-1 relative">
                 <div className="relative">
@@ -109,17 +111,17 @@ const Dashboard = () => {
                 {filterDropdownOpen && (
                   <>
                     {/* Overlay to close dropdown when clicking outside */}
-                    <div 
-                      className="fixed inset-0 z-40" 
+                    <div
+                      className="fixed inset-0 z-40"
                       onClick={() => setFilterDropdownOpen(false)}
                     />
-                    
+
                     {/* Dropdown content with very high z-index */}
                     <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl z-50 overflow-hidden">
                       <div className="p-2 border-b border-gray-700/50">
                         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider px-3 py-2">Filter Projects</p>
                       </div>
-                      
+
                       <div className="p-2">
                         {[
                           { value: 'all', label: 'All Projects', icon: '📋' },
@@ -133,11 +135,10 @@ const Dashboard = () => {
                               setFilterBy(option.value);
                               setFilterDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
-                              filterBy === option.value
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                            }`}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${filterBy === option.value
+                              ? 'bg-purple-500/20 text-purple-300'
+                              : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                              }`}
                           >
                             <span className="text-sm">{option.icon}</span>
                             <span className="text-sm font-medium">{option.label}</span>
@@ -158,11 +159,10 @@ const Dashboard = () => {
                               setSortBy(option.value);
                               setFilterDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
-                              sortBy === option.value
-                                ? 'bg-blue-500/20 text-blue-300'
-                                : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                            }`}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${sortBy === option.value
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                              }`}
                           >
                             <span className="text-sm">{option.icon}</span>
                             <span className="text-sm font-medium">{option.label}</span>
@@ -204,8 +204,8 @@ const Dashboard = () => {
                 {searchTerm || filterBy !== 'all' ? 'No matching projects found' : 'No personalized projects available yet'}
               </h3>
               <p className="text-gray-500 text-lg mb-6">
-                {searchTerm || filterBy !== 'all' 
-                  ? 'Try adjusting your search terms or filters' 
+                {searchTerm || filterBy !== 'all'
+                  ? 'Try adjusting your search terms or filters'
                   : 'Complete your profile to get personalized project recommendations'
                 }
               </p>
@@ -224,8 +224,8 @@ const Dashboard = () => {
           ) : (
             <div className="grid gap-6">
               {filteredProjects.map((idea, index) => (
-                <div 
-                  key={idea._id} 
+                <div
+                  key={idea._id}
                   className="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 hover:border-purple-500/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 hover:bg-gray-800/70 relative z-0"
                   style={{ position: 'relative' }}
                 >
@@ -246,10 +246,10 @@ const Dashboard = () => {
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {new Date(idea.createdAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
+                            {new Date(idea.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
                             })}
                           </span>
                           {idea.projectType === 'hackathon' && (
@@ -286,7 +286,7 @@ const Dashboard = () => {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(idea.skillsRequired || []).slice(0, 4).map((skill, skillIndex) => (
-                          <span 
+                          <span
                             key={skillIndex}
                             className="px-2 py-1 bg-blue-500/20 text-blue-200 rounded-lg text-xs font-medium border border-blue-500/30"
                           >
@@ -312,7 +312,7 @@ const Dashboard = () => {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(idea.tags || []).slice(0, 3).map((tag, tagIndex) => (
-                          <span 
+                          <span
                             key={tagIndex}
                             className="px-2 py-1 bg-green-500/20 text-green-200 rounded-lg text-xs font-medium border border-green-500/30"
                           >
@@ -341,7 +341,9 @@ const Dashboard = () => {
                         <Star className="w-4 h-4" />
                         Save
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 hover:text-purple-200 rounded-lg border border-purple-500/30 hover:border-purple-500/50 transition-all duration-200 text-sm font-medium">
+                      <button
+                        onClick={() => navigate(`/project/${idea._id}`)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 text-purple-300 hover:text-purple-200 rounded-lg border border-purple-500/30 hover:border-purple-500/50 transition-all duration-200 text-sm font-medium">
                         View Details
                         <ArrowRight className="w-4 h-4" />
                       </button>

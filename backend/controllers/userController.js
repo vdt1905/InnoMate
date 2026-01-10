@@ -55,7 +55,7 @@ export const updateProfile = async (req, res) => {
 
     if (name) user.name = name;
     if (bio) user.bio = bio;
-    
+
 
     if (skills) {
       user.skills = Array.isArray(skills)
@@ -83,5 +83,47 @@ export const updateProfile = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during profile update' });
+  }
+};
+
+export const getUserByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Fetch user info (excluding password)
+    const user = await User.findOne({ username }).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Fetch user's ideas
+    const ideas = await Idea.find({ createdBy: user._id })
+      .populate('teamMembers', 'name username')
+      .populate('comments.user', 'username');
+
+    res.status(200).json({
+      ...user._doc,
+      ideas,
+    });
+  } catch (err) {
+    console.error('Failed to fetch user by username', err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+export const searchUsers = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ message: 'Query parameter is required' });
+
+    const users = await User.find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { username: { $regex: query, $options: 'i' } }
+      ]
+    }).select('name username bio skills profilePicture customId');
+
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('Failed to search users', err);
+    res.status(500).json({ message: 'Server Error' });
   }
 };

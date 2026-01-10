@@ -12,7 +12,18 @@ export const sendJoinRequest = async (req, res) => {
     if (!idea) return res.status(404).json({ message: 'Project not found' });
 
     const existing = await JoinRequest.findOne({ ideaId, requester: requesterId });
-    if (existing) return res.status(400).json({ message: 'Request already sent' });
+    if (existing) {
+      if (existing.status === 'pending') {
+        return res.status(400).json({ message: 'Request already pending' });
+      }
+      if (existing.status === 'accepted') {
+        return res.status(400).json({ message: 'You are already a member' });
+      }
+      // If rejected, allow re-request (reset to pending)
+      existing.status = 'pending';
+      await existing.save();
+      return res.status(200).json({ message: 'Join request sent again', request: existing });
+    }
 
     const requester = await User.findById(requesterId);
 
@@ -46,7 +57,7 @@ export const getJoinRequests = async (req, res) => {
 
 
 export const acceptJoinRequest = async (req, res) => {
-  const { id, requestId } = req.params;
+  const { id, requestId } = req.params; // id = ideaId
   const idea = await Idea.findById(id);
 
   if (!idea) return res.status(404).json({ message: 'Idea not found' });
@@ -61,13 +72,23 @@ export const acceptJoinRequest = async (req, res) => {
     return res.status(400).json({ message: 'Team is full' });
   }
 
+  // Add member
   idea.teamMembers.push(request.requester);
   request.status = 'accepted';
   await request.save();
   await idea.save();
 
-  res.status(200).json({ message: 'Request accepted and user added to team' });
+  // ⬇️ Re-fetch populated document for immediate UI update
+  const populated = await Idea.findById(id)
+    .populate('createdBy', 'name username')
+    .populate('teamMembers', 'name username');
+
+  res.status(200).json({
+    message: 'Request accepted and user added to team',
+    idea: populated, // 👈 send populated idea back
+  });
 };
+
 
 
 export const rejectJoinRequest = async (req, res) => {
@@ -104,5 +125,50 @@ export const getJoinRequestStatus = async (req, res) => {
   } catch (error) {
     console.error('Status check error:', error);
     res.status(500).json({ message: 'Error checking join request status' });
+  }
+};
+
+
+export const getUserTeams = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Find ideas where the user is the leader or a member
+    const ideas = await Idea.find({
+      $or: [{ createdBy: userId }, { teamMembers: userId }]
+    })
+      .sort({ updatedAt: -1 })
+      .populate('createdBy', 'name username')
+      .populate('teamMembers', 'name username');
+
+    // Build a map of pending requests count per idea (for leader UX)
+    const ideaIds = ideas.map((i) => i._id);
+    const pendingCounts = await JoinRequest.aggregate([
+      { $match: { ideaId: { $in: ideaIds }, status: 'pending' } },
+      { $group: { _id: '$ideaId', count: { $sum: 1 } } }
+    ]);
+    const pendingMap = pendingCounts.reduce((acc, row) => {
+      acc[row._id.toString()] = row.count;
+      return acc;
+    }, {});
+
+    // Enrich ideas with role + pending count
+    const teams = ideas.map((idea) => {
+      const isLeader = String(idea.createdBy?._id || idea.createdBy) === String(userId);
+      return {
+        ...idea.toObject(),
+        role: isLeader ? 'leader' : 'member',
+        pendingRequests: isLeader ? (pendingMap[idea._id.toString()] || 0) : 0
+      };
+    });
+
+    // Optionally also return split lists (handy for UI)
+    const leadTeams = teams.filter((t) => t.role === 'leader');
+    const memberTeams = teams.filter((t) => t.role === 'member');
+
+    res.status(200).json({ teams, leadTeams, memberTeams });
+  } catch (err) {
+    console.error('getUserTeams error:', err);
+    res.status(500).json({ message: 'Failed to load your teams' });
   }
 };
