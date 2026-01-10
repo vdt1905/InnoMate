@@ -15,7 +15,10 @@ const ChatSection = ({ teamId }) => {
     useEffect(() => {
         // 1. Connect Socket
         // Adjust URL if backend port differs. Assuming typical localhost:5000 or same host
-        const socketInstance = io('http://localhost:5000', {
+        // 1. Connect Socket
+        const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
+
+        const socketInstance = io(SOCKET_URL, {
             withCredentials: true,
         });
         setSocket(socketInstance);
@@ -112,8 +115,8 @@ const ChatSection = ({ teamId }) => {
                                     {!isMe && <div className="text-xs text-slate-400 mb-0.5 ml-1">{msg.reqSender?.name}</div>}
                                     <div
                                         className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl text-sm ${isMe
-                                                ? 'bg-blue-600 text-white rounded-tr-sm'
-                                                : 'bg-slate-700 text-slate-200 rounded-tl-sm'
+                                            ? 'bg-blue-600 text-white rounded-tr-sm'
+                                            : 'bg-slate-700 text-slate-200 rounded-tl-sm'
                                             }`}
                                     >
                                         {msg.text}

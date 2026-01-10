@@ -51,7 +51,10 @@ const TeamChat = () => {
     useEffect(() => {
         if (!user) return;
 
-        const socketInstance = io('http://localhost:5000', {
+        // Derive Socket URL from API URL (remove /api suffix) or fallback to localhost
+        const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
+
+        const socketInstance = io(SOCKET_URL, {
             withCredentials: true,
         });
         setSocket(socketInstance);
@@ -246,8 +249,8 @@ const TeamChat = () => {
 
                                     {/* Bubble */}
                                     <div className={`relative px-4 py-2 text-[15px] shadow-sm ${isMe
-                                            ? 'bg-emerald-600 text-white rounded-2xl rounded-tr-none'
-                                            : 'bg-slate-700 text-slate-200 rounded-2xl rounded-tl-none'
+                                        ? 'bg-emerald-600 text-white rounded-2xl rounded-tr-none'
+                                        : 'bg-slate-700 text-slate-200 rounded-2xl rounded-tl-none'
                                         }`}>
                                         {msg.text}
 
