@@ -5,3 +5,4 @@ yarn-debug.log
 logs
 coverage
 .DS_Store
+serviceAccountKey.json

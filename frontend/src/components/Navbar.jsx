@@ -20,15 +20,7 @@ const Navbar = () => {
         </svg>
       )
     },
-    {
-      path: user ? `/${user.username}` : '/login',
-      label: 'Profile',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
+    
     {
       path: '/search-peers',
       label: 'Find Peers',
@@ -52,7 +44,25 @@ const Navbar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       )
-    }
+    },
+    {
+      path: '/chat',
+      label: 'Chat',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      )
+    },
+    {
+      path: user ? `/${user.username}` : '/login',
+      label: 'Profile',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      )
+    },
   ];
 
   const isActiveLink = (path) => location.pathname === path;
@@ -201,23 +211,7 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* Status Indicator */}
-      <div className="p-4 flex-shrink-0">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl backdrop-blur-sm`}>
-          <div className="flex items-center space-x-3">
-            <div className="relative flex-shrink-0">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-20"></div>
-            </div>
-            {!isCollapsed && (
-              <div className="min-w-0">
-                <span className="text-green-400 text-sm font-medium">Online</span>
-                <p className="text-xs text-green-300/70 truncate">All systems operational</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      
 
       {/* User Profile & Logout */}
       <div className="p-4 border-t border-gray-700/50 flex-shrink-0">

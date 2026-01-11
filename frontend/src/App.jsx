@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import useAuthStore from './Store/authStore';
 import Login from './pages/Login';
+import CheckEmail from './pages/CheckEmail';
+import FinishSignup from './pages/FinishSignup';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
@@ -16,6 +18,7 @@ import SearchPeers from './pages/SearchPeers';
 import ProjectDetails from './pages/ProjectDetails';
 import TeamDashboard from './pages/TeamDashboard';
 import TeamChat from './pages/TeamChat';
+import ChatList from './pages/ChatList';
 
 function App() {
   const { user, fetchUser } = useAuthStore();
@@ -32,6 +35,8 @@ function App() {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/check-email" element={<CheckEmail />} />
+        <Route path="/finish-signup" element={<FinishSignup />} />
         <Route path="/space" element={<SpaceTimelineExplorer />} />
 
         {/* Protected Routes */}
@@ -45,6 +50,7 @@ function App() {
             <Route path="/myteams" element={<Myteams />} />
             <Route path="/team/:id" element={<TeamDashboard />} /> {/* ✅ Secure Route */}
             <Route path="/team/:id/chat" element={<TeamChat />} /> {/* 💬 Full Page Chat */}
+            <Route path="/chat" element={<ChatList />} />
             <Route path="/newproject" element={<Newproject />} />
             <Route path="/:username" element={<Profile />} />
 

@@ -40,12 +40,36 @@ const useAuthStore = create((set, get) => ({
   register: async (formData) => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.post('/auth/register', formData); // Make sure your backend route is /auth/register
-      set({ user: res.data.user, loading: false });
+      // 1. Firebase Signup
+      const { auth } = await import('../firebase');
+      const { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signOut } = await import('firebase/auth');
+
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+
+      // 2. Update Profile
+      if (formData.name) {
+        await updateProfile(user, { displayName: formData.name });
+      }
+
+      // 3. Send Verification Email
+      await sendEmailVerification(user);
+      console.log("Verification email sent");
+
+      // 4. Send Custom Username to Backend (create user record)
+      // We need a token to authenticate with backend, even if just to create the user doc
+      const token = await user.getIdToken();
+      await axios.post('/auth/firebase', { token, username: formData.username });
+
+      // 5. Force Logout - Require verification before real login
+      await signOut(auth);
+
+      set({ loading: false }); // User is NOT set
       return true;
     } catch (err) {
+      console.error("Registration Error", err);
       set({
-        error: err.response?.data?.message || 'Registration failed',
+        error: err.code === 'auth/email-already-in-use' ? 'Email already in use' : (err.response?.data?.message || 'Registration failed'),
         loading: false,
       });
       return false;
@@ -55,15 +79,137 @@ const useAuthStore = create((set, get) => ({
   login: async (formData) => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.post('/auth/login', formData);
+      const { auth } = await import('../firebase');
+      const { signInWithEmailAndPassword, signOut } = await import('firebase/auth');
+
+      let emailToUse = formData.email;
+      const isEmail = String(emailToUse).toLowerCase().match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+      );
+
+      // If not an email, assume it's a username and try to resolve it
+      if (!isEmail) {
+        try {
+          const resolveRes = await axios.post('/auth/resolve-email', { username: emailToUse });
+          emailToUse = resolveRes.data.email;
+        } catch (resolveErr) {
+          throw new Error("Username not found");
+        }
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, formData.password);
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
+        await signOut(auth);
+        throw new Error('Please verify your email address before logging in.');
+      }
+
+      const token = await user.getIdToken();
+      const res = await axios.post('/auth/firebase', { token });
       set({ user: res.data.user, loading: false });
       return res.data;
     } catch (err) {
+      console.error("Login Error", err);
       set({
-        error: err.response?.data?.message || 'Login failed',
+        error: err.message || 'Login failed', // Use error message directly for our custom error
         loading: false,
       });
       return null;
+    }
+  },
+
+  // PASSWORDLESS EMAIL LINK
+  sendLoginLink: async (email, additionalData = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const { auth } = await import('../firebase');
+      const { sendSignInLinkToEmail } = await import('firebase/auth');
+
+      const actionCodeSettings = {
+        // Validation: This URL must be in authorized domains in Firebase Console
+        url: window.location.origin + '/finish-signup',
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+
+      // Save email and any temp registration data locally
+      window.localStorage.setItem('emailForSignIn', email);
+      if (Object.keys(additionalData).length > 0) {
+        window.localStorage.setItem('tempRegData', JSON.stringify(additionalData));
+      }
+
+      set({ loading: false });
+      return true;
+    } catch (err) {
+      console.error("Send Link Error", err);
+      set({
+        error: err.code === 'auth/invalid-email' ? 'Invalid email address' : (err.message || 'Failed to send link'),
+        loading: false,
+      });
+      return false;
+    }
+  },
+
+  completeLoginWithLink: async (email, link) => {
+    set({ loading: true, error: null });
+    try {
+      const { auth } = await import('../firebase');
+      const { signInWithEmailLink, updateProfile } = await import('firebase/auth');
+
+      // 1. Sign in
+      const result = await signInWithEmailLink(auth, email, link);
+      const user = result.user;
+
+      // 2. Get Token
+      const token = await user.getIdToken();
+
+      // 3. Retrieve any temp data (for new users)
+      const tempRegDataStr = window.localStorage.getItem('tempRegData');
+      let payload = { token };
+
+      if (tempRegDataStr) {
+        const tempRegData = JSON.parse(tempRegDataStr);
+        payload = { ...payload, ...tempRegData };
+
+        // Optionally update Firebase profile directly too
+        if (tempRegData.name) {
+          await updateProfile(user, { displayName: tempRegData.name });
+        }
+      }
+
+      // 4. Send to Backend
+      const res = await axios.post('/auth/firebase', payload);
+
+      // Cleanup
+      window.localStorage.removeItem('tempRegData');
+
+      set({ user: res.data.user, loading: false });
+      return true;
+    } catch (err) {
+      console.error("Complete Login Error", err);
+      set({
+        error: err.code === 'auth/invalid-action-code' ? 'Invalid or expired link' : (err.message || 'Login failed'),
+        loading: false
+      });
+      return false;
+    }
+  },
+
+  googleLogin: async ({ token }) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await axios.post('/auth/firebase', { token });
+      set({ user: res.data.user, loading: false });
+      return true;
+    } catch (err) {
+      console.error("Google Login Store Error:", err);
+      set({
+        error: err.response?.data?.message || 'Google Login failed',
+        loading: false,
+      });
+      return false;
     }
   },
 

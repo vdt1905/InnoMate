@@ -1,5 +1,5 @@
-import  mongoose from 'mongoose';
-import  bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -10,22 +10,24 @@ const userSchema = new mongoose.Schema({
   bio: String,
   bio: String,
   socialLinks: {
-  github: { type: String, default: '' },
-  linkedin: { type: String, default: '' },
-  twitter: { type: String, default: '' },
-  portfolio: { type: String, default: '' },
-},
+    github: { type: String, default: '' },
+    linkedin: { type: String, default: '' },
+    twitter: { type: String, default: '' },
+    portfolio: { type: String, default: '' },
+  },
+  googleId: { type: String },
+  avatar: { type: String },
 
 }, { timestamps: true });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

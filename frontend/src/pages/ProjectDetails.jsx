@@ -364,13 +364,15 @@ const ProjectDetails = () => {
                             {/* OWNER VIEW: Show Pending Requests */}
                             {isOwner ? (
                                 <div className="space-y-4">
-                                    <button
-                                        onClick={() => navigate(`/team/${id}`)}
-                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/20 mb-4"
-                                    >
-                                        <Shield className="w-4 h-4" />
-                                        <span>Go to Team Dashboard</span>
-                                    </button>
+                                    {idea.projectType !== 'personal' && (
+                                        <button
+                                            onClick={() => navigate(`/team/${id}`)}
+                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/20 mb-4"
+                                        >
+                                            <Shield className="w-4 h-4" />
+                                            <span>Go to Team Dashboard</span>
+                                        </button>
+                                    )}
 
                                     <div className="flex items-center space-x-2 text-gray-400 mb-2">
                                         <Users className="w-5 h-5" />
@@ -429,13 +431,15 @@ const ProjectDetails = () => {
                                                 <Check className="w-5 h-5" />
                                                 <span>You are a member</span>
                                             </div>
-                                            <button
-                                                onClick={() => navigate(`/team/${id}`)}
-                                                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/20"
-                                            >
-                                                <Shield className="w-4 h-4" />
-                                                <span>Go to Team Dashboard</span>
-                                            </button>
+                                            {idea.projectType !== 'personal' && (
+                                                <button
+                                                    onClick={() => navigate(`/team/${id}`)}
+                                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/20"
+                                                >
+                                                    <Shield className="w-4 h-4" />
+                                                    <span>Go to Team Dashboard</span>
+                                                </button>
+                                            )}
                                             {!isOwner && (
                                                 <button
                                                     onClick={handleLeaveTeam}
