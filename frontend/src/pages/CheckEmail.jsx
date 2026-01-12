@@ -52,6 +52,13 @@ export default function CheckEmail() {
                         <span>Back to Login</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
+                    <button
+                        onClick={() => navigate('/home')}
+                        className="w-full bg-white/5 border border-white/10 text-white font-semibold py-4 px-8 rounded-xl hover:bg-white/10 transition-all duration-200 flex items-center justify-center gap-2 group"
+                    >
+                        <span>Go to dashboard</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
                 </div>
             </div>
         </div>
