@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAuthStore from '../Store/authStore';
-import { Lightbulb, User, Calendar, Tag, Heart, MessageCircle, TrendingUp, Share2, ArrowLeft, Mail, Github, Users, Code, Zap, Check, X, Shield } from 'lucide-react';
+import { Lightbulb, User, Calendar, Tag, Heart, MessageCircle, TrendingUp, Share2, ArrowLeft, Mail, Github, Users, Code, Zap, Check, X, Shield, LayoutDashboard, Activity, Settings, Lock } from 'lucide-react';
 
 const ProjectDetails = () => {
     const { id } = useParams();
@@ -24,6 +24,7 @@ const ProjectDetails = () => {
     const [idea, setIdea] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState('');
+    const [activeTab, setActiveTab] = useState('overview');
 
     const handlePostComment = async () => {
         if (!newComment.trim()) return;
@@ -138,30 +139,67 @@ const ProjectDetails = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-6">
             <div className="max-w-5xl mx-auto">
                 {/* Back Button */}
                 <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center space-x-2 text-gray-400 hover:text-white mb-8 transition-colors duration-200"
+                    onClick={() => navigate('/home')}
+                    className="flex items-center space-x-2 text-gray-400 hover:text-white mb-6 transition-colors duration-200"
                 >
                     <ArrowLeft className="w-5 h-5" />
                     <span>Back</span>
                 </button>
 
+                {/* Navigation Tabs */}
+                <div className="bg-gray-800/30 border border-gray-700/50 p-1.5 rounded-2xl flex items-center gap-1 mb-8 w-fit backdrop-blur-sm">
+                    {[
+                        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+                        {
+                            id: 'dashboard',
+                            label: 'Dashboard',
+                            icon: Shield,
+                            disabled: !isMember && !isOwner
+                        }
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            disabled={tab.disabled}
+                            onClick={() => {
+                                if (tab.id === 'overview') {
+                                    setActiveTab('overview');
+                                } else if (tab.id === 'dashboard') {
+                                    navigate(`/team/${id}`);
+                                }
+                            }}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activeTab === tab.id
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                : tab.disabled
+                                    ? 'text-gray-600 cursor-not-allowed opacity-50'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                                }`}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            {tab.label}
+                            {tab.id === 'dashboard' && tab.disabled && (
+                                <Lock className="w-3 h-3 ml-1" />
+                            )}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                     {/* Left Column - Project Info */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8">
+                    <div className="lg:col-span-2 space-y-4 md:space-y-6">
+                        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-5 md:p-8">
                             <div className="flex items-start justify-between mb-6">
                                 <div className="flex items-center space-x-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                        <Lightbulb className="w-8 h-8 text-white" />
+                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+                                        <Lightbulb className="w-6 h-6 md:w-8 md:h-8 text-white" />
                                     </div>
                                     <div>
-                                        <h1 className="text-3xl font-bold text-white mb-2">{idea.title}</h1>
-                                        <div className="flex items-center space-x-3 text-gray-400 text-sm">
+                                        <h1 className="text-xl md:text-3xl font-bold text-white mb-1 md:mb-2">{idea.title}</h1>
+                                        <div className="flex flex-wrap items-center gap-2 md:space-x-3 text-gray-400 text-xs md:text-sm">
                                             <div className="flex items-center space-x-1">
                                                 <User className="w-4 h-4" />
                                                 <span>{idea.createdBy?.name || 'Anonymous'}</span>

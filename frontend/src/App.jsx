@@ -20,6 +20,8 @@ import TeamDashboard from './pages/TeamDashboard';
 import TeamChat from './pages/TeamChat';
 import ChatList from './pages/ChatList';
 
+import LandingPage from './pages/LandingPage';
+
 function App() {
   const { user, fetchUser } = useAuthStore();
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/check-email" element={<CheckEmail />} />
@@ -54,13 +57,10 @@ function App() {
             <Route path="/newproject" element={<Newproject />} />
             <Route path="/:username" element={<Profile />} />
 
-            <Route path="/" element={<Navigate to="/home" />} />
-
-
             <Route path="*" element={<Navigate to="/home" />} />
           </Route>
         ) : (
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/" />} />
         )}
       </Routes>
     </Router>

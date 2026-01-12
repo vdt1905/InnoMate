@@ -192,7 +192,7 @@ const TeamChat = () => {
                 </div>
 
                 {/* Chat Header */}
-                <div className="h-16 px-6 bg-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 flex items-center justify-between z-10">
+                <div className="h-16 px-4 md:px-6 bg-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 flex items-center justify-between z-10">
                     <div className="flex items-center gap-4">
                         <div className="md:hidden" onClick={() => setSidebarOpen(true)}>
                             <ArrowLeft className="w-6 h-6 text-slate-400" />
