@@ -112,14 +112,20 @@ export const getUserByUsername = async (req, res) => {
 export const searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
-    if (!query) return res.status(400).json({ message: 'Query parameter is required' });
 
-    const users = await User.find({
-      $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } }
-      ]
-    }).select('name username bio skills profilePicture customId');
+    let searchCriteria = {};
+    if (query) {
+      searchCriteria = {
+        $or: [
+          { name: { $regex: query, $options: 'i' } },
+          { username: { $regex: query, $options: 'i' } }
+        ]
+      };
+    }
+
+    const users = await User.find(searchCriteria)
+      .select('name username bio skills profilePicture customId')
+      .limit(50); // Limit results to avoid performance issues
 
     res.status(200).json(users);
   } catch (err) {

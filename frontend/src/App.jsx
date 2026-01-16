@@ -19,6 +19,7 @@ import ProjectDetails from './pages/ProjectDetails';
 import TeamDashboard from './pages/TeamDashboard';
 import TeamChat from './pages/TeamChat';
 import ChatList from './pages/ChatList';
+import Hyperspeed from './components/Hyperspeed';
 
 import LandingPage from './pages/LandingPage';
 
@@ -32,42 +33,8 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-black to-black"></div>
-
-        <div className="relative z-10 flex flex-col items-center">
-          {/* Tech Spinner */}
-          <div className="relative w-24 h-24 mb-8">
-            <div className="absolute inset-0 border-4 border-purple-500/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-t-purple-500 border-r-cyan-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-4 border-4 border-t-transparent border-r-transparent border-b-pink-500 border-l-transparent rounded-full animate-spin-reverse"></div>
-
-            {/* Inner Pulse */}
-            <div className="absolute inset-[30%] bg-white/5 rounded-full animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.5)]"></div>
-          </div>
-
-          {/* Text */}
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent animate-pulse tracking-wide">
-            INNOMATE
-          </h2>
-          <div className="flex items-center gap-1 mt-3">
-            <div className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <span className="text-cyan-500/50 text-xs tracking-widest uppercase ml-2">System Initializing</span>
-          </div>
-        </div>
-
-        <style>{`
-          @keyframes spin-reverse {
-            from { transform: rotate(360deg); }
-            to { transform: rotate(0deg); }
-          }
-          .animate-spin-reverse {
-            animation: spin-reverse 3s linear infinite;
-          }
-        `}</style>
+      <div className="fixed inset-0 w-full h-full bg-black">
+        <Hyperspeed />
       </div>
     );
   }

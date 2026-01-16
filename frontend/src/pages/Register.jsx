@@ -79,12 +79,12 @@ export default function Register() {
         {/* Card container */}
         <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
           {/* Header */}
-          <div className="p-6 md:p-8 pb-6 text-center">
-            <UserPlus className="w-12 h-12 mx-auto text-white mb-4" />
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+          <div className="p-6 pb-4 text-center">
+            <UserPlus className="w-10 h-10 mx-auto text-white mb-2" />
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
               InnoMate
             </h1>
-            <p className="text-gray-400 text-sm mt-2 tracking-wider">CREATE ACCOUNT</p>
+            <p className="text-gray-400 text-xs mt-1 tracking-wider">CREATE ACCOUNT</p>
           </div>
 
           {/* Error message */}
@@ -98,9 +98,9 @@ export default function Register() {
           )}
 
           {/* Form */}
-          <div className="px-6 md:px-8 pb-8 space-y-6">
+          <div className="px-6 pb-6 space-y-4">
             {/* Name field */}
-            <div className="relative mt-8">
+            <div className="relative mt-2">
               <div className="relative">
                 <User className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${focusedField === 'name' ? 'text-purple-400' : 'text-gray-500'
                   }`} />
@@ -114,7 +114,7 @@ export default function Register() {
                   onKeyDown={handleKeyDown}
                   placeholder=" "
                   required
-                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'name'
+                  className={`w-full pl-12 pr-4 py-3 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'name'
                     ? 'border-purple-500/50 bg-purple-500/5'
                     : 'border-gray-600/50 hover:border-gray-500/70'
                     }`}
@@ -143,7 +143,7 @@ export default function Register() {
                   onKeyDown={handleKeyDown}
                   placeholder=" "
                   required
-                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'username'
+                  className={`w-full pl-12 pr-4 py-3 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'username'
                     ? 'border-pink-500/50 bg-pink-500/5'
                     : 'border-gray-600/50 hover:border-gray-500/70'
                     }`}
@@ -172,7 +172,7 @@ export default function Register() {
                   onKeyDown={handleKeyDown}
                   placeholder=" "
                   required
-                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'email'
+                  className={`w-full pl-12 pr-4 py-3 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'email'
                     ? 'border-violet-500/50 bg-violet-500/5'
                     : 'border-gray-600/50 hover:border-gray-500/70'
                     }`}
@@ -201,7 +201,7 @@ export default function Register() {
                   onKeyDown={handleKeyDown}
                   placeholder=" "
                   required
-                  className={`w-full pl-12 pr-12 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'password'
+                  className={`w-full pl-12 pr-12 py-3 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'password'
                     ? 'border-cyan-500/50 bg-cyan-500/5'
                     : 'border-gray-600/50 hover:border-gray-500/70'
                     }`}
@@ -227,7 +227,7 @@ export default function Register() {
               type="button"
               onClick={handleSubmit}
               disabled={loading || !formData.name || !formData.username || !formData.email || !formData.password}
-              className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-purple-500 hover:to-cyan-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group mt-8"
+              className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-semibold py-3 px-8 rounded-xl hover:from-purple-500 hover:to-cyan-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group mt-4"
             >
               <span className="flex items-center justify-center space-x-3">
                 {loading ? (
@@ -256,7 +256,7 @@ export default function Register() {
           </div>
 
           {/* Google Sign In */}
-          <div className="px-8 pb-4">
+          <div className="px-6 pb-6 pt-0">
             <button
               type="button"
               onClick={async () => {
@@ -275,7 +275,7 @@ export default function Register() {
                   console.error("Google Sign In Error", error);
                 }
               }}
-              className="w-full bg-white text-gray-900 font-semibold py-4 px-8 rounded-xl hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-3"
+              className="w-full bg-white text-gray-900 font-semibold py-3 px-8 rounded-xl hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

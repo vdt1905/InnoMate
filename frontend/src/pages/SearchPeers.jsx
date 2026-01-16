@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, User } from 'lucide-react';
+import { Search, User, ArrowRight } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,17 +10,26 @@ const SearchPeers = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
 
+    // Fetch default users on mount
+    React.useEffect(() => {
+        const fetchDefaultUsers = async () => {
+            setIsSearching(true);
+            const results = await searchUsers('');
+            setSearchResults(results);
+            setIsSearching(false);
+        };
+        fetchDefaultUsers();
+    }, []);
+
     const handleSearch = async (e) => {
         const query = e.target.value;
         setSearchQuery(query);
-        if (query.length > 0) {
-            setIsSearching(true);
-            const results = await searchUsers(query);
-            setSearchResults(results);
-            setIsSearching(false);
-        } else {
-            setSearchResults([]);
-        }
+
+        // Debounce could be added here, but for now:
+        setIsSearching(true);
+        const results = await searchUsers(query);
+        setSearchResults(results);
+        setIsSearching(false);
     };
 
     return (
@@ -46,7 +55,12 @@ const SearchPeers = () => {
                         </div>
                     </div>
 
-                    {searchResults.length > 0 ? (
+                    {isSearching ? (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="text-gray-400">Searching specifically for you...</p>
+                        </div>
+                    ) : searchResults.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {searchResults.map((result) => (
                                 <div
@@ -69,26 +83,20 @@ const SearchPeers = () => {
                                         )}
                                     </div>
                                     <div className="p-2 bg-gray-700/30 rounded-xl group-hover:bg-purple-500/20 transition-colors duration-200">
-                                        <span className="text-2xl">👉</span>
+                                        {/* <span className="text-2xl">👉</span> */}
+                                        <ArrowRight />
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    ) : searchQuery ? (
-                        <div className="text-center py-12">
-                            <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Search className="w-10 h-10 text-gray-600" />
-                            </div>
-                            <p className="text-gray-400 text-lg">No users found matching "{searchQuery}"</p>
-                        </div>
                     ) : (
                         <div className="text-center py-20">
-                            <div className="w-24 h-24 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                                <span className="text-5xl">🔍</span>
+                            <div className="w-24 h-24 bg-gray-800/50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                                <Search className="w-10 h-10 text-gray-600" />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">Find Your Next Teammate</h3>
+                            <h3 className="text-2xl font-bold text-white mb-2">No peers found</h3>
                             <p className="text-gray-400 max-w-md mx-auto">
-                                Start typing to search for peers in the ecosystem.
+                                {searchQuery ? `We couldn't find anyone matching "${searchQuery}"` : "No members found in the community yet."}
                             </p>
                         </div>
                     )}

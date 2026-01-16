@@ -354,12 +354,18 @@ export default function Profile() {
                 <span className="text-4xl">📝</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-400 mb-2">No Projects Yet</h3>
-              <p className="text-gray-500 text-lg">Start by uploading your first project to showcase your work.</p>
-              <Link to="/newproject">
-                <button className="mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25">
-                  Upload First Project
-                </button>
-              </Link>
+              <p className="text-gray-500 text-lg">
+                {isOwnProfile
+                  ? "Start by uploading your first project to showcase your work."
+                  : "This user hasn't uploaded any projects yet."}
+              </p>
+              {isOwnProfile && (
+                <Link to="/newproject">
+                  <button className="mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25">
+                    Upload First Project
+                  </button>
+                </Link>
+              )}
             </div>
           ) : (
             <div className="grid gap-6">
@@ -377,63 +383,27 @@ export default function Profile() {
                         <h3 className="text-2xl font-bold text-white group-hover:text-purple-300 transition-colors duration-200 mb-1">
                           {idea.title}
                         </h3>
-                        <p className="text-gray-400 text-sm">
-                          Created {new Date(idea.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
+                        <p className="text-gray-400 text-sm flex items-center gap-2">
+                          <span className="text-gray-500">Project Lead:</span>
+                          <span className="text-gray-300 font-medium">{idea.createdBy?.name || detailedUser?.name || 'Unknown'}</span>
+                          <span className="text-gray-600">•</span>
+                          <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
                         </p>
                       </div>
                     </div>
-                    <button className="opacity-0 group-hover:opacity-100 px-4 py-2 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 border border-purple-500/30 transition-all duration-200 text-sm font-medium">
-                      View Details
-                    </button>
+                    <Link to={`/project/${idea._id}`}>
+                      <button className="px-6 py-2.5 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 border border-purple-500/30 transition-all duration-200 text-sm font-semibold flex items-center gap-2">
+                        <span>View Details</span>
+                        <span className="text-lg">→</span>
+                      </button>
+                    </Link>
                   </div>
 
-                  <p className="text-gray-300 text-lg leading-relaxed mb-6">{idea.description}</p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-400 text-lg">⚡</span>
-                        <span className="text-blue-300 font-semibold">Required Skills</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {(idea.skillsRequired || []).map((skill, skillIndex) => (
-                          <span
-                            key={skillIndex}
-                            className="px-3 py-1 bg-blue-500/20 text-blue-200 rounded-full text-sm border border-blue-500/30"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {(!idea.skillsRequired || idea.skillsRequired.length === 0) && (
-                          <span className="text-blue-300/70 italic">No specific skills required</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-green-400 text-lg">🏷️</span>
-                        <span className="text-green-300 font-semibold">Tags</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {(idea.tags || []).map((tag, tagIndex) => (
-                          <span
-                            key={tagIndex}
-                            className="px-3 py-1 bg-green-500/20 text-green-200 rounded-full text-sm border border-green-500/30"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {(!idea.tags || idea.tags.length === 0) && (
-                          <span className="text-green-300/70 italic">No tags assigned</span>
-                        )}
-                      </div>
-                    </div>
+                  <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                    <p className="text-gray-300 text-lg leading-relaxed">{idea.description}</p>
                   </div>
+
+                  {/* Skills/Tags Removed as requested */}
                 </div>
               ))}
             </div>

@@ -42,7 +42,7 @@ const LandingPage = () => {
                 {/* Navbar Placeholder - positioned absolute top */}
                 <nav className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-auto">
                     <div className="flex items-center gap-2">
-                      
+
                         <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
                             InnoMate
                         </span>
@@ -65,7 +65,7 @@ const LandingPage = () => {
 
                 {/* Main Hero Content */}
                 <div className="max-w-4xl px-6 text-center pointer-events-auto">
-                   
+
 
                     <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
                         Build <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">The Future</span>
@@ -100,7 +100,7 @@ const LandingPage = () => {
                 </div>
 
                 {/* Footer Stats/Features - Absolute Bottom */}
-                
+
 
             </div>
         </div>
