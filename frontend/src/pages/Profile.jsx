@@ -6,7 +6,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/axiosInstance';
 
 export default function Profile() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, fetchUser } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
@@ -39,7 +39,8 @@ export default function Profile() {
   const handleSubmit = async () => {
     try {
       await axios.put('/users/me', formData);
-
+      await fetchUser();
+      await getDetailedUser();
       alert('Profile updated!');
     } catch (err) {
       console.error(err);
@@ -171,11 +172,7 @@ export default function Profile() {
   ];
 
   const activityData = [
-    { action: 'Updated project Alpha', time: '2 hours ago', type: 'update' },
-    { action: 'Completed task review', time: '4 hours ago', type: 'complete' },
-    { action: 'Added new team member', time: '1 day ago', type: 'create' },
-    { action: 'Deployed to production', time: '2 days ago', type: 'deploy' },
-    { action: 'Fixed critical bug', time: '3 days ago', type: 'fix' }
+
   ];
 
 
@@ -414,6 +411,47 @@ export default function Profile() {
   };
 
   const renderActivity = () => {
+    return (
+      <div className="space-y-8">
+        <div className="text-center md:text-left">
+          <h2 className="text-3xl font-bold text-white flex items-center justify-center md:justify-start mb-2">
+            <Activity className="w-8 h-8 mr-3 text-purple-400" />
+            Recent Activity
+          </h2>
+          <p className="text-gray-400 text-lg">Your recent actions and updates</p>
+        </div>
+
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8">
+          <div className="space-y-4">
+            {activityData.map((activity, index) => (
+              <div key={index} className="flex items-center gap-4 p-4 bg-gray-700/30 rounded-xl border border-gray-600/30 hover:border-purple-500/30 transition-all duration-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-purple-500/20">
+                  <Clock className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-medium text-lg">{activity.action}</h4>
+                  <p className="text-gray-400 text-sm flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    {activity.time}
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium border ${activity.type === 'create' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  activity.type === 'update' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                    activity.type === 'deploy' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                      activity.type === 'fix' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                        'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                  }`}>
+                  {activity.type.toUpperCase()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSettings = () => {
 
     return (
       <div className="space-y-8">
@@ -702,7 +740,7 @@ export default function Profile() {
         return renderActivity();
 
       case 'settings':
-        return <div className="text-white text-center py-12">Settings panel coming soon...</div>;
+        return renderSettings();
       case 'security':
         return <div className="text-white text-center py-12">Security settings coming soon...</div>;
       default:

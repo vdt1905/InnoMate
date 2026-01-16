@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from '../Store/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Heart,
   MessageCircle,
@@ -453,17 +453,19 @@ const Home = () => {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pt-6 border-t border-white/10">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-6">
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
-                            <User className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-white font-semibold text-sm lg:text-base truncate">
-                              {idea.createdBy?.name || 'Unknown Creator'}
-                            </p>
-                            <p className="text-gray-400 text-xs lg:text-sm truncate">
-                              @{idea.createdBy?.username || 'unknown'}
-                            </p>
-                          </div>
+                          <Link to={`/${idea.createdBy?.username}`} className="flex items-center space-x-3 group/user hover:opacity-80 transition-opacity">
+                            <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                              <User className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-white font-semibold text-sm lg:text-base truncate group-hover/user:text-violet-300 transition-colors">
+                                {idea.createdBy?.name || 'Unknown Creator'}
+                              </p>
+                              <p className="text-gray-400 text-xs lg:text-sm truncate">
+                                @{idea.createdBy?.username || 'unknown'}
+                              </p>
+                            </div>
+                          </Link>
                         </div>
 
                         <div className="flex items-center space-x-2 text-gray-400">
