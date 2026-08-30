@@ -3,13 +3,19 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, User, ArrowLeft } fro
 import useAuthStore from '../Store/authStore';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GridScan } from '../components/GridScan';
+import { GridScan } from '../components/GridScanLazy';
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [focusedField, setFocusedField] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading, error } = useAuthStore();
+  const { login, loading, error, clearError } = useAuthStore();
+
+  // Errors live in the store, so without this a failed attempt here would still
+  // be on screen after navigating to Register and back.
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -19,8 +25,11 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(form);
-    navigate('/home');
+    // login() resolves to null on bad credentials and sets `error`. Navigating
+    // regardless sent the user to a protected route with no session, which
+    // bounced them straight back to the landing page and hid the error.
+    const result = await login(form);
+    if (result) navigate('/home');
   };
 
   const togglePasswordVisibility = () => {
@@ -168,7 +177,7 @@ export default function Login() {
                   </>
                 ) : (
                   <>
-                    <span>ACCESS NEXUS</span>
+                    <span>Login</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
                   </>
                 )}
@@ -190,8 +199,8 @@ export default function Login() {
                   console.log("Google Token Generated");
                   // Call store action
                   const { googleLogin } = useAuthStore.getState();
-                  await googleLogin({ token });
-                  navigate('/home');
+                  const ok = await googleLogin({ token });
+                  if (ok) navigate('/home');
                 } catch (error) {
                   console.error("Google Sign In Error", error);
                 }

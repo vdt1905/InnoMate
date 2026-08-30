@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, ChromaticAberrationEffect } from 'postprocessing';
 import * as THREE from 'three';
-import * as faceapi from 'face-api.js';
+
+// face-api.js (~700 kB) is only needed for the optional webcam head-tracking, so
+// it is loaded on demand instead of shipping in the initial bundle.
+let faceapi = null;
+const loadFaceApi = async () => {
+    if (!faceapi) faceapi = await import('face-api.js');
+    return faceapi;
+};
 
 const vert = `
 varying vec2 vUv;
@@ -663,12 +670,14 @@ export const GridScan = ({
     }, [enableGyro, uiFaceActive]);
 
     useEffect(() => {
+        if (!enableWebcam) return;
         let canceled = false;
         const load = async () => {
             try {
+                const fa = await loadFaceApi();
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath),
-                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelsPath)
+                    fa.nets.tinyFaceDetector.loadFromUri(modelsPath),
+                    fa.nets.faceLandmark68TinyNet.loadFromUri(modelsPath)
                 ]);
                 if (!canceled) setModelsReady(true);
             } catch {
@@ -679,7 +688,7 @@ export const GridScan = ({
         return () => {
             canceled = true;
         };
-    }, [modelsPath]);
+    }, [enableWebcam, modelsPath]);
 
     useEffect(() => {
         let stop = false;
@@ -689,6 +698,8 @@ export const GridScan = ({
         const start = async () => {
             if (!enableWebcam || !modelsReady) return;
             if (!video) return;
+
+            const fa = await loadFaceApi();
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -701,7 +712,7 @@ export const GridScan = ({
                 return;
             }
 
-            const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+            const opts = new fa.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
             const detect = async ts => {
                 if (stop) return;
@@ -709,7 +720,7 @@ export const GridScan = ({
                 if (ts - lastDetect >= 33) {
                     lastDetect = ts;
                     try {
-                        const res = await faceapi.detectSingleFace(video, opts).withFaceLandmarks(true);
+                        const res = await fa.detectSingleFace(video, opts).withFaceLandmarks(true);
                         if (res && res.detection) {
                             const det = res.detection;
                             const box = det.box;

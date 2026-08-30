@@ -1,6 +1,16 @@
 import { Idea } from '../models/Idea.js';
 import { User } from '../models/user.model.js';
 import { Message } from '../models/Message.js';
+import { JoinRequest } from '../models/JoinRequest.js';
+
+// Owner or accepted member. Used to gate anything team-private.
+const isTeamMember = (idea, userId) => {
+  const ownerId = idea.createdBy?._id || idea.createdBy;
+  return (
+    ownerId.toString() === userId.toString() ||
+    idea.teamMembers.some((m) => (m?._id || m).toString() === userId.toString())
+  );
+};
 
 export const createIdea = async (req, res) => {
   try {
@@ -112,37 +122,6 @@ export const deleteComment = async (req, res) => {
   res.status(200).json({ message: 'Comment deleted' });
 };
 
-export const joinTeam = async (req, res) => {
-  const idea = await Idea.findById(req.params.id);
-  if (!idea) return res.status(404).json({ message: 'Idea not found' });
-
-  // Check if it's a hackathon idea
-  if (idea.projectType !== 'hackathon') {
-    return res.status(400).json({ message: 'Joining teams is only for hackathon ideas' });
-  }
-
-  // Check if already in team
-  if (idea.teamMembers.includes(req.user._id)) {
-    return res.status(400).json({ message: 'You are already part of the team' });
-  }
-
-  // Check if team is full
-  if (idea.teamMembers.length >= idea.hackathon.maxTeamSize) {
-    return res.status(400).json({ message: 'Team is already full' });
-  }
-
-  idea.teamMembers.push(req.user._id);
-  await idea.save();
-
-  res.status(200).json({
-    message: 'Joined the team',
-    teamSize: idea.teamMembers.length,
-    team: idea.teamMembers,
-  });
-};
-
-
-
 export const getPersonalizedFeed = async (req, res) => {
   try {
     const userSkills = req.user.skills.map(skill => skill.toLowerCase());
@@ -247,7 +226,12 @@ export const deleteIdea = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this idea' });
     }
 
-    await idea.remove();
+    await Promise.all([
+      idea.deleteOne(),
+      JoinRequest.deleteMany({ ideaId: idea._id }),
+      Message.deleteMany({ teamId: idea._id })
+    ]);
+
     res.status(200).json({ message: 'Idea deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -338,10 +322,7 @@ export const getTeamDetails = async (req, res) => {
     if (!idea) return res.status(404).json({ message: 'Project not found' });
 
     // Security Check: User must be Owner OR Member
-    const isOwner = idea.createdBy._id.toString() === req.user._id.toString();
-    const isMember = idea.teamMembers.some(member => member._id.toString() === req.user._id.toString());
-
-    if (!isOwner && !isMember) {
+    if (!isTeamMember(idea, req.user._id)) {
       return res.status(403).json({ message: 'Access denied: Team members only' });
     }
 
@@ -355,6 +336,14 @@ export const getTeamDetails = async (req, res) => {
 export const getTeamMessages = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const idea = await Idea.findById(id).select('createdBy teamMembers');
+    if (!idea) return res.status(404).json({ message: 'Project not found' });
+
+    if (!isTeamMember(idea, req.user._id)) {
+      return res.status(403).json({ message: 'Access denied: Team members only' });
+    }
+
     const messages = await Message.find({ teamId: id }).sort({ createdAt: 1 });
     res.status(200).json(messages);
   } catch (err) {

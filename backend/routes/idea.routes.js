@@ -4,7 +4,7 @@ import {
   toggleLikeIdea,
   addComment,
   deleteComment,
-  joinTeam, getPersonalizedFeed,
+  getPersonalizedFeed,
   getAllIdeas,
   getIdeaById,
   updateIdea,
@@ -35,7 +35,6 @@ router.post('/createIdea', protect, createIdea);
 router.put('/:id/like', protect, toggleLikeIdea);
 router.post('/:id/comments', protect, addComment);
 router.delete('/:ideaId/comments/:commentId', protect, deleteComment);
-router.put('/:id/join', protect, joinTeam);
 router.get('/feed', protect, getPersonalizedFeed);
 router.get('/all', getAllIdeas); // no auth needed
 router.get('/search', searchIdeas); // no auth needed

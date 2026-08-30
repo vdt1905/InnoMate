@@ -1,11 +1,28 @@
 services:
   - type: web
     name: innomate-backend
-    env: node
+    runtime: node
     rootDir: backend
     plan: free
-    buildCommand: npm install
-    startCommand: node server.js
+    # npm ci installs exactly what package-lock.json pins, and fails loudly if
+    # the lockfile and package.json disagree.
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /ping
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Set these in the Render dashboard — sync:false keeps values out of git.
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Full service-account JSON in one variable. Alternatively set
+      # FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      # Frontend origin, so CORS and the session cookie work.
+      - key: CLIENT_URL
+        sync: false

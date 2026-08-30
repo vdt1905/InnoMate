@@ -3,7 +3,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, User, UserPlus, Arrow
 import useAuthStore from '../Store/authStore';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GridScan } from '../components/GridScan';
+import { GridScan } from '../components/GridScanLazy';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -14,7 +14,11 @@ export default function Register() {
   });
   const [focusedField, setFocusedField] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const { register, loading, error } = useAuthStore();
+  const { register, loading, error, clearError } = useAuthStore();
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -237,7 +241,7 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    <span>JOIN NEXUS</span>
+                    <span>Signup</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
                   </>
                 )}
@@ -269,8 +273,8 @@ export default function Register() {
                   console.log("Google Token Generated");
                   // Call store action
                   const { googleLogin } = useAuthStore.getState();
-                  await googleLogin({ token });
-                  navigate('/home');
+                  const ok = await googleLogin({ token });
+                  if (ok) navigate('/home');
                 } catch (error) {
                   console.error("Google Sign In Error", error);
                 }

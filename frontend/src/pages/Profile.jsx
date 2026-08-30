@@ -68,6 +68,11 @@ export default function Profile() {
     }
   }, [detailedUser]);
 
+  const [selectedSkills, setSelectedSkills] = useState(formData.skills ? formData.skills.split(',').map(s => s.trim()) : []);
+  const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false);
+  const [customSkill, setCustomSkill] = useState('');
+  const [skillSearchTerm, setSkillSearchTerm] = useState('');
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
@@ -78,10 +83,6 @@ export default function Profile() {
       </div>
     );
   }
-  const [selectedSkills, setSelectedSkills] = useState(formData.skills ? formData.skills.split(',').map(s => s.trim()) : []);
-  const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false);
-  const [customSkill, setCustomSkill] = useState('');
-  const [skillSearchTerm, setSkillSearchTerm] = useState('');
 
   // Predefined skills list for easy selection
   const availableSkills = [

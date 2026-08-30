@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   skills: [String],
   bio: String,
-  bio: String,
   socialLinks: {
     github: { type: String, default: '' },
     linkedin: { type: String, default: '' },
@@ -30,5 +29,9 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// searchUsers regex-scans these, and username lookups back the profile route.
+userSchema.index({ name: 1 });
+userSchema.index({ skills: 1 });
 
 export const User = mongoose.model('User', userSchema);

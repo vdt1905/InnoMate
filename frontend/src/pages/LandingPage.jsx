@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, User, Terminal, Code2, Users2, Rocket } from 'lucide-react';
-import { GridScan } from '../components/GridScan';
+import { GridScan } from '../components/GridScanLazy';
 import useAuthStore from '../Store/authStore';
 
 const LandingPage = () => {

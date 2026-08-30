@@ -1,6 +1,28 @@
 import { create } from 'zustand';
 import axios from '../api/axiosInstance';
 
+const FIREBASE_AUTH_MESSAGES = {
+  'auth/invalid-credential': 'Incorrect email or password.',
+  'auth/wrong-password': 'Incorrect email or password.',
+  'auth/user-not-found': 'No account found with that email.',
+  'auth/invalid-email': 'That email address is not valid.',
+  'auth/user-disabled': 'This account has been disabled.',
+  'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.',
+  'auth/network-request-failed': 'Network error — check your connection and try again.',
+};
+
+// Firebase surfaces things like "Firebase: Error (auth/invalid-credential).",
+// which is not something to show a user. Axios failures and our own thrown
+// Errors travel through here too.
+const authErrorMessage = (err, fallback) => {
+  if (FIREBASE_AUTH_MESSAGES[err?.code]) return FIREBASE_AUTH_MESSAGES[err.code];
+  if (err?.response?.data?.message) return err.response.data.message;
+  if (err?.code === 'ERR_NETWORK') return 'Could not reach the server. Please try again shortly.';
+  // A Firebase/Axios code we do not have wording for: its raw message is noise.
+  if (err?.code) return fallback;
+  return err?.message || fallback;
+};
+
 const useAuthStore = create((set, get) => ({
   user: null,
   loading: false,
@@ -25,6 +47,8 @@ const useAuthStore = create((set, get) => ({
   get isAuthenticated() {
     return !!get().user;
   },
+
+  clearError: () => set({ error: null }),
 
   fetchUser: async () => {
     try {
@@ -69,7 +93,9 @@ const useAuthStore = create((set, get) => ({
     } catch (err) {
       console.error("Registration Error", err);
       set({
-        error: err.code === 'auth/email-already-in-use' ? 'Email already in use' : (err.response?.data?.message || 'Registration failed'),
+        error: err.code === 'auth/email-already-in-use'
+          ? 'Email already in use'
+          : (err.response?.data?.message || authErrorMessage(err, 'Registration failed')),
         loading: false,
       });
       return false;
@@ -112,7 +138,7 @@ const useAuthStore = create((set, get) => ({
     } catch (err) {
       console.error("Login Error", err);
       set({
-        error: err.message || 'Login failed', // Use error message directly for our custom error
+        error: authErrorMessage(err, 'Login failed'),
         loading: false,
       });
       return null;

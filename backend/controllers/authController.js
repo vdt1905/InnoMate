@@ -1,76 +1,40 @@
 // controllers/authController.js
 import { User } from '../models/user.model.js';
+import admin, { isFirebaseReady } from '../config/firebaseAdmin.js';
 import generateToken from '../utils/generateToken.js';
 
-// REGISTER
-export const register = async (req, res) => {
-  const { username, name, email, password } = req.body;
+const isProduction = () => process.env.NODE_ENV === 'production';
 
-  const exists = await User.findOne({ email });
-  const userexist = await User.findOne({ username });
+// Set and cleared with identical attributes — a mismatch here means the browser
+// silently keeps the old cookie on logout.
+const cookieOptions = () => ({
+  httpOnly: true,
+  secure: isProduction(),
+  sameSite: isProduction() ? 'None' : 'Lax',
+});
 
-  if (exists || userexist) {
-    return res.status(400).json({ message: 'User already exists' });
-  }
-
-
-  const user = await User.create({ username, name, email, password });
-
-  const token = generateToken(user._id);
-
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+const sendSession = (res, user, status = 200, extra = {}) => {
+  res.cookie('token', generateToken(user._id), {
+    ...cookieOptions(),
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
-
-
-  res.status(201).json({ user });
+  res.status(status).json({ user, ...extra });
 };
 
-// LOGIN
-export const login = async (req, res) => {
-  const { email, password } = req.body;
-
-  const user = await User.findOne({ email });
-  if (!user || !(await user.matchPassword(password))) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const token = generateToken(user._id);
-
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-
-  res.status(200).json({ user });
-};
-
-// LOGOUT
-export const logout = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    sameSite: 'Strict',
-    secure: process.env.NODE_ENV === 'production',
-  });
-  res.status(200).json({ message: 'Logged out' });
-};
-
-
-import admin from '../config/firebaseAdmin.js';
-
-
-// FIREBASE AUTH (Handles Google, Email/Password, etc.)
+// FIREBASE AUTH (Handles Google, Email/Password, Email link)
+// This is the only way an account is created or a session is issued: it is the
+// single point where Firebase has already proven ownership of the address.
 export const firebaseAuth = async (req, res) => {
-  const { token, username: customUsername } = req.body; // Accept custom username
+  const { token, username: customUsername } = req.body;
 
   if (!token) {
-    return res.status(400).json({ message: "No token provided" });
+    return res.status(400).json({ message: 'No token provided' });
+  }
+
+  // Without this the call fails deep inside the SDK with "the default Firebase
+  // app does not exist", which says nothing about the actual misconfiguration.
+  if (!isFirebaseReady) {
+    return res.status(503).json({ message: 'Authentication is not configured on the server' });
   }
 
   try {
@@ -88,7 +52,6 @@ export const firebaseAuth = async (req, res) => {
       await user.save();
     } else {
       // Create new user
-
       const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
       let finalUsername = customUsername;
@@ -98,13 +61,9 @@ export const firebaseAuth = async (req, res) => {
         finalUsername = email.split('@')[0];
       }
 
-      // Ensure specific username uniqueness if custom one provided too
-      // (The model usually has unique: true, so create would fail if dup)
-      // Let's do a quick check to be safe/friendly
+      // Ensure username uniqueness (the model also enforces it)
       const checkUsername = await User.findOne({ username: finalUsername });
       if (checkUsername) {
-        // If custom was taken, throw error? Or append number?
-        // For now, append number to ensure creation
         finalUsername = finalUsername + Math.floor(Math.random() * 1000);
       }
 
@@ -114,20 +73,11 @@ export const firebaseAuth = async (req, res) => {
         username: finalUsername,
         password: randomPassword, // Legacy field, random for Firebase users
         googleId: uid,
-        avatar: picture || ""
+        avatar: picture || ''
       });
     }
 
-    const jwtToken = generateToken(user._id);
-
-    res.cookie('token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.status(200).json({ user, emailVerified: email_verified });
+    sendSession(res, user, 200, { emailVerified: email_verified });
   } catch (error) {
     console.error('Firebase auth error:', error);
     res.status(500).json({ message: 'Server error during Firebase auth', error: error.message });
@@ -146,4 +96,10 @@ export const resolveEmail = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Server error resolving email', error: error.message });
   }
+};
+
+// LOGOUT
+export const logout = (req, res) => {
+  res.clearCookie('token', cookieOptions());
+  res.status(200).json({ message: 'Logged out' });
 };

@@ -38,4 +38,11 @@ const ideaSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// createdBy backs the profile feed, teamMembers backs "my teams", and the
+// tag/skill arrays back search.
+ideaSchema.index({ createdBy: 1, createdAt: -1 });
+ideaSchema.index({ teamMembers: 1 });
+ideaSchema.index({ tags: 1 });
+ideaSchema.index({ skillsRequired: 1 });
+
 export const Idea = mongoose.model('Idea', ideaSchema);

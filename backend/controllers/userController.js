@@ -15,7 +15,8 @@ export const getProfile = async (req, res) => {
       email: user.email,
       bio: user.bio,
       skills: user.skills,
-      socialLinks: user.socialLinks || {}, // 👈 add this line
+      avatar: user.avatar,
+      socialLinks: user.socialLinks || {},
     });
   } catch (err) {
     console.error('Failed to fetch user profile', err);
@@ -54,7 +55,8 @@ export const updateProfile = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (name) user.name = name;
-    if (bio) user.bio = bio;
+    // Compared against undefined so an empty string can clear the bio.
+    if (bio !== undefined) user.bio = bio;
 
 
     if (skills) {
@@ -124,7 +126,7 @@ export const searchUsers = async (req, res) => {
     }
 
     const users = await User.find(searchCriteria)
-      .select('name username bio skills profilePicture customId')
+      .select('name username bio skills avatar')
       .limit(50); // Limit results to avoid performance issues
 
     res.status(200).json(users);

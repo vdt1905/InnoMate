@@ -35,4 +35,9 @@ const joinRequestSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// A user can only ever have one request per project — the controller re-opens
+// the existing row rather than inserting a second one.
+joinRequestSchema.index({ ideaId: 1, requester: 1 }, { unique: true });
+joinRequestSchema.index({ ideaId: 1, status: 1 });
+
 export const JoinRequest = mongoose.model('JoinRequest', joinRequestSchema);
