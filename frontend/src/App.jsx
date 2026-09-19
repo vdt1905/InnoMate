@@ -24,10 +24,11 @@ const ProjectDetails = lazy(() => import('./pages/ProjectDetails'));
 const TeamDashboard = lazy(() => import('./pages/TeamDashboard'));
 const TeamChat = lazy(() => import('./pages/TeamChat'));
 const ChatList = lazy(() => import('./pages/ChatList'));
+const DirectChat = lazy(() => import('./pages/DirectChat'));
 
 const PageFallback = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-gray-900">
-    <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-700 border-t-white" />
+  <div className="flex h-screen w-full items-center justify-center bg-bg">
+    <span className="spinner" />
   </div>
 );
 
@@ -72,6 +73,7 @@ function App() {
               <Route path="/team/:id" element={<TeamDashboard />} /> {/* ✅ Secure Route */}
               <Route path="/team/:id/chat" element={<TeamChat />} /> {/* 💬 Full Page Chat */}
               <Route path="/chat" element={<ChatList />} />
+              <Route path="/chat/:conversationId" element={<DirectChat />} />
               <Route path="/newproject" element={<Newproject />} />
               <Route path="/:username" element={<Profile />} />
 

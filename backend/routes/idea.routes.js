@@ -24,7 +24,10 @@ import {
   acceptJoinRequest,
   rejectJoinRequest,
   getJoinRequestStatus,
-  getUserTeams
+  getUserTeams,
+  inviteToProject,
+  acceptInvite,
+  declineInvite
 
 } from '../controllers/joinRequestController.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -57,6 +60,11 @@ router.put('/:id/requests/:requestId/accept', protect, acceptJoinRequest);
 router.put('/:id/requests/:requestId/reject', protect, rejectJoinRequest);
 router.get('/:ideaId/join-request/status', protect, getJoinRequestStatus);
 router.get('/teams/mine', protect, getUserTeams);
+
+// Invites: the leader asks someone to join; they answer from notifications.
+router.post('/:id/invite', protect, inviteToProject);
+router.post('/invites/:requestId/accept', protect, acceptInvite);
+router.post('/invites/:requestId/decline', protect, declineInvite);
 
 
 

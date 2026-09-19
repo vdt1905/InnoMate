@@ -13,6 +13,8 @@ import { connectDB } from './DB/connectDB.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import ideaRoutes from './routes/idea.routes.js'
+import dmRoutes from './routes/dm.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 // Middleware imports
 import { errorHandler } from './middleware/errorHandler.js';
@@ -57,6 +59,8 @@ const io = new Server(server, {
 
 // Run Socket Handler to manage real-time connections
 socketHandler(io);
+// Controllers that push real-time events (direct messages) reach io through the app.
+app.set('io', io);
 
 // Global Middleware
 // CORS configuration for Express routes
@@ -91,6 +95,8 @@ const authLimiter = rateLimit({
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ideas', ideaRoutes);
+app.use('/api/messages', dmRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Simple health check route
 app.get("/ping", (req, res) => res.send("pong"));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Rocket, Users, Hash, Code, FileText, Settings, Sparkles, X, Search } from 'lucide-react';
+import { Plus, Users, Code, X, Search, ChevronDown } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
 
 const Newproject = () => {
@@ -166,9 +166,12 @@ const Newproject = () => {
         maxTeamSize: parseInt(formData.hackathon.maxTeamSize),
         description: formData.hackathon.description,
       };
+    } else if (formData.hackathon.maxTeamSize) {
+      // Personal projects can build a team too; the size cap is optional.
+      ideaData.hackathon = { maxTeamSize: parseInt(formData.hackathon.maxTeamSize) };
     }
 
-    const { success, idea } = await createIdea(ideaData);
+    const { success } = await createIdea(ideaData);
     if (success) {
       alert('Project created successfully!');
       // Reset form
@@ -190,440 +193,410 @@ const Newproject = () => {
     }
   };
 
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      skillsRequired: '',
+      tags: '',
+      projectType: 'personal',
+      hackathon: {
+        maxTeamSize: '',
+        description: '',
+      },
+    });
+    setSelectedSkills([]);
+    setSelectedTags([]);
+  };
+
+  const projectTypes = [
+    { value: 'personal', label: 'Personal project', text: 'Build at your own pace — invite a team anytime', Icon: Code },
+    { value: 'hackathon', label: 'Hackathon', text: 'Time-limited competitive project', Icon: Users },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
-              <Rocket className="w-8 h-8 text-white" />
+    <div className="page-narrow">
+      <header className="mb-6">
+        <h1 className="page-title">Create a project</h1>
+        <p className="page-subtitle">
+          Describe your idea and the skills you need. We&apos;ll help you find the right collaborators.
+        </p>
+      </header>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Basics */}
+        <section className="card p-5">
+          <h2 className="section-title">Basics</h2>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="np-title" className="label">
+                Title <span className="text-subtle">*</span>
+              </label>
+              <input
+                id="np-title"
+                name="title"
+                placeholder="Give your project a clear name"
+                value={formData.title}
+                onChange={handleChange}
+                required
+                className="input"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="np-description" className="label">
+                Description <span className="text-subtle">*</span>
+              </label>
+              <textarea
+                id="np-description"
+                name="description"
+                placeholder="What problem does it solve? What will you build, and what's the expected outcome?"
+                value={formData.description}
+                onChange={handleChange}
+                required
+                rows={6}
+                className="input min-h-32 resize-y"
+              />
+              <p className="help">Be specific about goals, scope and expected deliverables.</p>
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent mb-4">
-            Create New Project
-          </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Bring your ideas to life by creating a new project. Whether it's a personal project or a hackathon challenge, we'll help you find the right collaborators.
-          </p>
-        </div>
+        </section>
 
-        {/* Main Form */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
-            {/* Project Type Selection */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white border-b border-gray-700/50 pb-3 flex items-center">
-                <Settings className="w-5 h-5 mr-2 text-purple-400" />
-                Project Type
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className={`relative flex items-center p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
-                  formData.projectType === 'personal' 
-                    ? 'border-purple-500/50 bg-purple-500/10' 
-                    : 'border-gray-600/50 bg-gray-700/30 hover:border-gray-500/50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="projectType"
-                    value="personal"
-                    checked={formData.projectType === 'personal'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      formData.projectType === 'personal' ? 'bg-purple-500/20' : 'bg-gray-600/50'
-                    }`}>
-                      <Code className={`w-6 h-6 ${formData.projectType === 'personal' ? 'text-purple-400' : 'text-gray-400'}`} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-white">Personal Project</h4>
-                      <p className="text-gray-400 text-sm">Standard collaborative project</p>
-                    </div>
-                  </div>
-                </label>
+        {/* Skills & tags */}
+        <section className="card p-5">
+          <h2 className="section-title">Skills &amp; tags</h2>
+          <div className="mt-4 space-y-6">
+            {/* Skills */}
+            <div>
+              <span className="label">Required skills</span>
 
-                <label className={`relative flex items-center p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
-                  formData.projectType === 'hackathon' 
-                    ? 'border-purple-500/50 bg-purple-500/10' 
-                    : 'border-gray-600/50 bg-gray-700/30 hover:border-gray-500/50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="projectType"
-                    value="hackathon"
-                    checked={formData.projectType === 'hackathon'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      formData.projectType === 'hackathon' ? 'bg-purple-500/20' : 'bg-gray-600/50'
-                    }`}>
-                      <Users className={`w-6 h-6 ${formData.projectType === 'hackathon' ? 'text-purple-400' : 'text-gray-400'}`} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-white">Hackathon</h4>
-                      <p className="text-gray-400 text-sm">Time-limited competitive project</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Basic Information */}
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-white border-b border-gray-700/50 pb-3 flex items-center">
-                <FileText className="w-5 h-5 mr-2 text-purple-400" />
-                Project Information
-              </h3>
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Project Title <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    name="title"
-                    placeholder="Enter an engaging project title..."
-                    value={formData.title}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Project Description <span className="text-red-400">*</span>
-                  </label>
-                  <textarea
-                    name="description"
-                    placeholder="Describe your project in detail. What problem does it solve? What technologies will you use? What's the expected outcome?"
-                    value={formData.description}
-                    onChange={handleChange}
-                    required
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 resize-none"
-                  />
-                  <p className="text-xs text-gray-500">Be specific about goals, scope, and expected deliverables</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Skills Section */}
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-white border-b border-gray-700/50 pb-3 flex items-center">
-                <Sparkles className="w-5 h-5 mr-2 text-purple-400" />
-                Required Skills
-              </h3>
-              
-              {/* Selected Skills Display */}
               {selectedSkills.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-4 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                <div className="mb-3 flex flex-wrap gap-1.5">
                   {selectedSkills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-500/20 text-blue-300 rounded-lg border border-blue-500/30 text-sm font-medium group hover:bg-blue-500/30 transition-colors duration-200"
-                    >
+                    <span key={index} className="chip">
                       {skill}
                       <button
                         type="button"
                         onClick={() => handleSkillRemove(skill)}
-                        className="text-blue-400 hover:text-red-400 transition-colors duration-200"
+                        className="-mr-0.5 rounded text-subtle transition-colors hover:text-fg"
+                        aria-label={`Remove ${skill}`}
                       >
-                        <X className="w-4 h-4" />
+                        <X className="h-3 w-3" strokeWidth={2.5} />
                       </button>
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Skills Dropdown */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setSkillsDropdownOpen(!skillsDropdownOpen)}
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 flex items-center justify-between hover:bg-gray-700/70"
+                  className="input flex cursor-pointer items-center justify-between text-left text-subtle"
+                  aria-expanded={skillsDropdownOpen}
                 >
-                  Select required skills...
-                  <Code className="w-5 h-5" />
+                  Choose from common skills
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted transition-transform ${skillsDropdownOpen ? 'rotate-180' : ''}`}
+                    strokeWidth={2}
+                  />
                 </button>
 
                 {skillsDropdownOpen && (
-                  <div className="absolute z-20 w-full mt-2 bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl max-h-72 overflow-hidden">
-                    <div className="p-3 border-b border-gray-700/50">
+                  <div className="card absolute z-20 mt-2 w-full overflow-hidden shadow-lg">
+                    <div className="border-b border-line p-3">
                       <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
                         <input
                           type="text"
-                          placeholder="Search skills..."
+                          placeholder="Search skills"
                           value={skillSearchTerm}
                           onChange={(e) => setSkillSearchTerm(e.target.value)}
-                          className="w-full px-4 py-2 pl-10 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm"
+                          className="input pl-9"
                         />
-                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                       </div>
                     </div>
-                    
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 overflow-y-auto p-3">
                       {filteredSkills.length > 0 ? (
-                        <div className="p-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {filteredSkills.map((skill, index) => (
                             <button
                               key={index}
                               type="button"
                               onClick={() => handleSkillSelect(skill)}
-                              className="w-full text-left px-3 py-2 text-gray-300 hover:bg-blue-500/20 hover:text-blue-300 rounded-lg transition-colors duration-200 text-sm"
+                              className="chip cursor-pointer transition-colors hover:border-line-strong hover:bg-surface-3"
                             >
+                              <Plus className="h-3 w-3 text-muted" strokeWidth={2.5} />
                               {skill}
                             </button>
                           ))}
                         </div>
                       ) : (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No skills found matching "{skillSearchTerm}"
-                        </div>
+                        <p className="py-2 text-center text-sm text-muted">
+                          No skills match &ldquo;{skillSearchTerm}&rdquo;
+                        </p>
                       )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Custom Skill Input */}
-              <div className="flex gap-2">
+              <div className="mt-2 flex gap-2">
                 <input
                   type="text"
-                  placeholder="Add custom skill..."
+                  placeholder="Add a custom skill"
                   value={customSkill}
                   onChange={(e) => setCustomSkill(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && e.preventDefault() && handleCustomSkillAdd()}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCustomSkillAdd(); } }}
+                  className="input min-w-0 flex-1"
                 />
-                <button
-                  type="button"
-                  onClick={handleCustomSkillAdd}
-                  className="px-6 py-3 bg-blue-600/20 text-blue-300 rounded-xl hover:bg-blue-600/30 border border-blue-500/30 transition-all duration-200 font-medium flex items-center"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
+                <button type="button" onClick={handleCustomSkillAdd} className="btn btn-secondary btn-sm shrink-0">
+                  <Plus className="h-4 w-4" strokeWidth={2} />
                   Add
                 </button>
               </div>
+              <p className="help">Pick from the list or add your own.</p>
             </div>
 
-            {/* Tags Section */}
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-white border-b border-gray-700/50 pb-3 flex items-center">
-                <Hash className="w-5 h-5 mr-2 text-purple-400" />
-                Project Tags
-              </h3>
-              
-              {/* Selected Tags Display */}
+            <div className="divider" />
+
+            {/* Tags */}
+            <div>
+              <span className="label">Tags</span>
+
               {selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-4 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                <div className="mb-3 flex flex-wrap gap-1.5">
                   {selectedTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-green-500/20 text-green-300 rounded-lg border border-green-500/30 text-sm font-medium group hover:bg-green-500/30 transition-colors duration-200"
-                    >
+                    <span key={index} className="chip">
                       #{tag}
                       <button
                         type="button"
                         onClick={() => handleTagRemove(tag)}
-                        className="text-green-400 hover:text-red-400 transition-colors duration-200"
+                        className="-mr-0.5 rounded text-subtle transition-colors hover:text-fg"
+                        aria-label={`Remove ${tag}`}
                       >
-                        <X className="w-4 h-4" />
+                        <X className="h-3 w-3" strokeWidth={2.5} />
                       </button>
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Tags Dropdown */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setTagsDropdownOpen(!tagsDropdownOpen)}
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-left text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 flex items-center justify-between hover:bg-gray-700/70"
+                  className="input flex cursor-pointer items-center justify-between text-left text-subtle"
+                  aria-expanded={tagsDropdownOpen}
                 >
-                  Select project tags...
-                  <Hash className="w-5 h-5" />
+                  Choose from common tags
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted transition-transform ${tagsDropdownOpen ? 'rotate-180' : ''}`}
+                    strokeWidth={2}
+                  />
                 </button>
 
                 {tagsDropdownOpen && (
-                  <div className="absolute z-20 w-full mt-2 bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl max-h-72 overflow-hidden">
-                    <div className="p-3 border-b border-gray-700/50">
+                  <div className="card absolute z-20 mt-2 w-full overflow-hidden shadow-lg">
+                    <div className="border-b border-line p-3">
                       <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
                         <input
                           type="text"
-                          placeholder="Search tags..."
+                          placeholder="Search tags"
                           value={tagSearchTerm}
                           onChange={(e) => setTagSearchTerm(e.target.value)}
-                          className="w-full px-4 py-2 pl-10 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm"
+                          className="input pl-9"
                         />
-                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                       </div>
                     </div>
-                    
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 overflow-y-auto p-3">
                       {filteredTags.length > 0 ? (
-                        <div className="p-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {filteredTags.map((tag, index) => (
                             <button
                               key={index}
                               type="button"
                               onClick={() => handleTagSelect(tag)}
-                              className="w-full text-left px-3 py-2 text-gray-300 hover:bg-green-500/20 hover:text-green-300 rounded-lg transition-colors duration-200 text-sm"
+                              className="chip cursor-pointer transition-colors hover:border-line-strong hover:bg-surface-3"
                             >
-                              #{tag}
+                              <Plus className="h-3 w-3 text-muted" strokeWidth={2.5} />
+                              {tag}
                             </button>
                           ))}
                         </div>
                       ) : (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No tags found matching "{tagSearchTerm}"
-                        </div>
+                        <p className="py-2 text-center text-sm text-muted">
+                          No tags match &ldquo;{tagSearchTerm}&rdquo;
+                        </p>
                       )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Custom Tag Input */}
-              <div className="flex gap-2">
+              <div className="mt-2 flex gap-2">
                 <input
                   type="text"
-                  placeholder="Add custom tag..."
+                  placeholder="Add a custom tag"
                   value={customTag}
                   onChange={(e) => setCustomTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && e.preventDefault() && handleCustomTagAdd()}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCustomTagAdd(); } }}
+                  className="input min-w-0 flex-1"
                 />
-                <button
-                  type="button"
-                  onClick={handleCustomTagAdd}
-                  className="px-6 py-3 bg-green-600/20 text-green-300 rounded-xl hover:bg-green-600/30 border border-green-500/30 transition-all duration-200 font-medium flex items-center"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
+                <button type="button" onClick={handleCustomTagAdd} className="btn btn-secondary btn-sm shrink-0">
+                  <Plus className="h-4 w-4" strokeWidth={2} />
                   Add
                 </button>
               </div>
+              <p className="help">Tags help people discover your project.</p>
             </div>
+          </div>
+        </section>
 
-            {/* Hackathon Specific Fields */}
-            {formData.projectType === 'hackathon' && (
-              <div className="space-y-6 p-6 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20">
-                <h3 className="text-xl font-semibold text-white flex items-center">
-                  <Users className="w-5 h-5 mr-2 text-purple-400" />
-                  Hackathon Details
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">
-                      Maximum Team Size <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      name="hackathon.maxTeamSize"
-                      placeholder="e.g., 4"
-                      value={formData.hackathon.maxTeamSize}
-                      onChange={handleChange}
-                      required
-                      type="number"
-                      min="1"
-                      max="20"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">
-                      Team Status
-                    </label>
-                    <div className="px-4 py-3 rounded-xl bg-gray-700/30 border border-gray-600/30 text-gray-400">
-                      Looking for teammates
-                    </div>
-                  </div>
-                </div>
+        {/* Project type */}
+        <section className="card p-5">
+          <h2 className="section-title">Project type</h2>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {projectTypes.map((type) => {
+              const { value, label, text } = type;
+              const TypeIcon = type.Icon;
+              const selected = formData.projectType === value;
+              return (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                    selected ? 'border-link bg-accent-soft' : 'border-line hover:border-line-strong'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="projectType"
+                    value={value}
+                    checked={selected}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <TypeIcon className={`mt-0.5 h-5 w-5 shrink-0 ${selected ? 'text-link' : 'text-muted'}`} strokeWidth={1.8} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-fg">{label}</span>
+                    <span className="mt-0.5 block text-xs text-muted">{text}</span>
+                  </span>
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                      selected ? 'border-link' : 'border-line-strong'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {selected && <span className="h-2 w-2 rounded-full bg-link" />}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Hackathon Goals & Timeline <span className="text-red-400">*</span>
+          {/* Personal projects: optional team size */}
+          {formData.projectType === 'personal' && (
+            <div className="mt-5 border-t border-line pt-5">
+              <h3 className="text-sm font-semibold text-fg">Team</h3>
+              <p className="mt-1 text-sm text-muted">
+                People can request to join, and you choose who gets in. Accepted members share a team dashboard and chat.
+              </p>
+              <div className="mt-4 max-w-xs">
+                <label htmlFor="np-personal-team-size" className="label">
+                  Maximum team size <span className="text-subtle">(optional)</span>
+                </label>
+                <input
+                  id="np-personal-team-size"
+                  name="hackathon.maxTeamSize"
+                  placeholder="No limit"
+                  value={formData.hackathon.maxTeamSize}
+                  onChange={handleChange}
+                  type="number"
+                  min="2"
+                  max="50"
+                  className="input"
+                />
+                <p className="help">Including you. Leave empty for no limit.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Hackathon specific fields */}
+          {formData.projectType === 'hackathon' && (
+            <div className="mt-5 space-y-4 border-t border-line pt-5">
+              <h3 className="text-sm font-semibold text-fg">Hackathon details</h3>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="np-team-size" className="label">
+                    Maximum team size <span className="text-subtle">*</span>
                   </label>
-                  <textarea
-                    name="hackathon.description"
-                    placeholder="Describe the hackathon-specific goals, timeline, expected deliverables, and any special requirements..."
-                    value={formData.hackathon.description}
+                  <input
+                    id="np-team-size"
+                    name="hackathon.maxTeamSize"
+                    placeholder="e.g. 4"
+                    value={formData.hackathon.maxTeamSize}
                     onChange={handleChange}
                     required
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 resize-none"
+                    type="number"
+                    min="1"
+                    max="20"
+                    className="input"
                   />
+                  <p className="help">Between 1 and 20 people.</p>
+                </div>
+
+                <div>
+                  <span className="label">Team status</span>
+                  <div className="flex h-[38px] items-center">
+                    <span className="badge">
+                      <span className="dot bg-success" />
+                      Looking for teammates
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-red-400 text-sm flex items-center">
-                  <span className="mr-2">⚠️</span>
-                  {error}
-                </p>
+              <div>
+                <label htmlFor="np-hackathon-description" className="label">
+                  Goals and timeline <span className="text-subtle">*</span>
+                </label>
+                <textarea
+                  id="np-hackathon-description"
+                  name="hackathon.description"
+                  placeholder="Hackathon-specific goals, timeline, expected deliverables and any special requirements"
+                  value={formData.hackathon.description}
+                  onChange={handleChange}
+                  required
+                  rows={4}
+                  className="input min-h-32 resize-y"
+                />
               </div>
-            )}
-
-            {/* Submit Button */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-700/50">
-              <button
-                type="submit"
-                disabled={loading}
-                className={`flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg flex items-center justify-center ${
-                  loading
-                    ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:shadow-purple-500/25'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating Project...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="w-5 h-5 mr-2" />
-                    Create Project
-                  </>
-                )}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({
-                    title: '',
-                    description: '',
-                    skillsRequired: '',
-                    tags: '',
-                    projectType: 'personal',
-                    hackathon: {
-                      maxTeamSize: '',
-                      description: '',
-                    },
-                  });
-                  setSelectedSkills([]);
-                  setSelectedTags([]);
-                }}
-                className="px-8 py-4 bg-gray-700/50 hover:bg-gray-700/70 text-gray-300 hover:text-white rounded-xl font-semibold transition-all duration-300 border border-gray-600/50 hover:border-gray-500/50"
-              >
-                Reset Form
-              </button>
             </div>
-          </form>
+          )}
+        </section>
+
+        {error && <div className="alert-error">{error}</div>}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onClick={resetForm} className="btn btn-ghost">
+            Reset
+          </button>
+          <button type="submit" disabled={loading} className="btn btn-primary">
+            {loading ? (
+              <>
+                <span className="spinner h-4 w-4" />
+                Creating…
+              </>
+            ) : (
+              'Create project'
+            )}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

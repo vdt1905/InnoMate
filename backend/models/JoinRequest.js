@@ -32,6 +32,13 @@ const joinRequestSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'accepted', 'rejected'],
     default: 'pending'
+  },
+  // 'request': the person asked to join. 'invite': the leader asked them.
+  // Either way `requester` is the person who would join the team.
+  type: {
+    type: String,
+    enum: ['request', 'invite'],
+    default: 'request'
   }
 }, { timestamps: true });
 

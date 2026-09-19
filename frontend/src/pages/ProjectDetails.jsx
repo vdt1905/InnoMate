@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../Store/authStore';
-import { Lightbulb, User, Calendar, Tag, Heart, MessageCircle, TrendingUp, Share2, ArrowLeft, Mail, Github, Users, Code, Zap, Check, X, Shield, LayoutDashboard, Activity, Settings, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Share2, ArrowLeft, Check, X, Lock } from 'lucide-react';
+import Avatar from '../components/Avatar';
+import InvitePeople from '../components/InvitePeople';
+
 
 const ProjectDetails = () => {
     const { id } = useParams();
@@ -19,12 +22,33 @@ const ProjectDetails = () => {
         loadingJoin,
         removeMember,
         leaveTeam,
-        addCommentToIdea
+        addCommentToIdea,
+        inviteIdByIdea,
+        respondToInvite
     } = useAuthStore();
     const [idea, setIdea] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
+    const [linkCopied, setLinkCopied] = useState(false);
+    const openConversation = useAuthStore((state) => state.openConversation);
+
+    const handleMessageLead = async () => {
+        const res = await openConversation(idea.createdBy._id);
+        if (res.ok) navigate(`/chat/${res.id}`);
+        else alert(res.error);
+    };
+
+    const handleShare = async () => {
+        const url = `${window.location.origin}/project/${id}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        } catch {
+            window.prompt('Copy this link:', url);
+        }
+    };
 
     const handlePostComment = async () => {
         if (!newComment.trim()) return;
@@ -75,6 +99,17 @@ const ProjectDetails = () => {
         await sendJoinRequest(id);
     };
 
+    const [inviteError, setInviteError] = useState('');
+    const handleInviteResponse = async (accept) => {
+        setInviteError('');
+        const res = await respondToInvite(inviteIdByIdea[id], accept);
+        if (!res.ok) return setInviteError(res.error);
+        const updatedIdea = await getIdeaById(id);
+        setIdea(updatedIdea);
+    };
+
+    const refreshIdea = async () => setIdea(await getIdeaById(id));
+
     const handleAccept = async (requestId) => {
         await acceptJoinRequest(id, requestId);
         // refresh idea to show new member
@@ -102,12 +137,13 @@ const ProjectDetails = () => {
         }
     };
 
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <div className="text-white text-lg">Loading project details...</div>
+            <div className="page">
+                <div className="empty">
+                    <span className="spinner" />
+                    <p className="empty-text mt-4">Loading project…</p>
                 </div>
             </div>
         );
@@ -115,14 +151,15 @@ const ProjectDetails = () => {
 
     if (!idea) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white mb-2">Project Not Found</h2>
+            <div className="page">
+                <div className="empty">
+                    <h2 className="empty-title">Project not found</h2>
+                    <p className="empty-text">It may have been removed or the link is wrong.</p>
                     <button
                         onClick={() => navigate('/allideas')}
-                        className="text-purple-400 hover:text-purple-300"
+                        className="btn btn-secondary mt-5"
                     >
-                        Back to All Ideas
+                        Back to all ideas
                     </button>
                 </div>
             </div>
@@ -138,469 +175,433 @@ const ProjectDetails = () => {
         });
     };
 
+    const formatTimeAgo = (date) => {
+        if (!date) return 'Recently';
+        const diffInMs = new Date() - new Date(date);
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInHours / 24);
+        const diffInWeeks = Math.floor(diffInDays / 7);
+        const diffInMonths = Math.floor(diffInDays / 30);
+
+        if (diffInMonths > 0) return `${diffInMonths}mo ago`;
+        if (diffInWeeks > 0) return `${diffInWeeks}w ago`;
+        if (diffInDays > 0) return `${diffInDays}d ago`;
+        if (diffInHours > 0) return `${diffInHours}h ago`;
+        return 'Just now';
+    };
+
+    const skills = Array.isArray(idea.skillsRequired)
+        ? idea.skillsRequired
+        // Handle case where it might be a comma-separated string from older data
+        : idea.skillsRequired
+            ? idea.skillsRequired.toString().split(',').map((skill) => skill.trim())
+            : [];
+    const likeCount = Array.isArray(idea.likes) ? idea.likes.length : (idea.likes || 0);
+    const commentCount = Array.isArray(idea.comments) ? idea.comments.length : (idea.comments || 0);
+    const viewCount = Array.isArray(idea.views) ? idea.views.length : (idea.views || 0);
+    const memberCount = idea.teamMembers?.length || 0;
+    const isHackathonProject = idea.projectType === 'hackathon';
+    // Any project can cap its team size — hackathons must, personal ones may.
+    const teamLimit = idea.hackathon?.maxTeamSize || null;
+    const teamFull = Boolean(teamLimit) && memberCount >= teamLimit;
+
+    const tabs = [
+        { id: 'overview', label: 'Overview' },
+        {
+            id: 'dashboard',
+            label: 'Team dashboard',
+            disabled: !isMember && !isOwner
+        }
+    ];
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-6">
-            <div className="max-w-5xl mx-auto">
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate('/home')}
-                    className="flex items-center space-x-2 text-gray-400 hover:text-white mb-6 transition-colors duration-200"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    <span>Back</span>
-                </button>
+        <div className="page">
+            {/* Back */}
+            <button
+                onClick={() => navigate('/home')}
+                className="-ml-1 mb-5 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium text-muted transition-colors hover:text-fg"
+            >
+                <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+                Back
+            </button>
 
-                {/* Navigation Tabs */}
-                <div className="bg-gray-800/30 border border-gray-700/50 p-1.5 rounded-2xl flex items-center gap-1 mb-8 w-fit backdrop-blur-sm">
-                    {[
-                        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-                        {
-                            id: 'dashboard',
-                            label: 'Dashboard',
-                            icon: Shield,
-                            disabled: !isMember && !isOwner
-                        }
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            disabled={tab.disabled}
-                            onClick={() => {
-                                if (tab.id === 'overview') {
-                                    setActiveTab('overview');
-                                } else if (tab.id === 'dashboard') {
-                                    navigate(`/team/${id}`);
-                                }
-                            }}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                                : tab.disabled
-                                    ? 'text-gray-600 cursor-not-allowed opacity-50'
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-                                }`}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            {tab.label}
-                            {tab.id === 'dashboard' && tab.disabled && (
-                                <Lock className="w-3 h-3 ml-1" />
-                            )}
-                        </button>
-                    ))}
+            {/* Header */}
+            <header className="mb-6">
+                <div className="flex items-start justify-between gap-4">
+                    <h1 className="page-title min-w-0 break-words">{idea.title}</h1>
+                    {linkCopied && <span className="shrink-0 text-xs text-muted">Link copied</span>}
+                    <button onClick={handleShare} className="icon-btn shrink-0 text-muted" aria-label="Copy link" title="Copy link">
+                        <Share2 className="h-5 w-5" strokeWidth={1.8} />
+                    </button>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <Link to={`/${idea.createdBy?.username}`} className="flex min-w-0 items-center gap-2.5">
+                        <Avatar src={idea.createdBy?.avatar} name={idea.createdBy?.name} size="sm" />
+                        <span className="truncate text-sm">
+                            <span className="font-semibold text-fg hover:text-muted">
+                                {idea.createdBy?.username || idea.createdBy?.name || 'anonymous'}
+                            </span>
+                            <span className="text-subtle" title={formatDate(idea.createdAt)}> · {formatTimeAgo(idea.createdAt)}</span>
+                        </span>
+                    </Link>
+                    <span className="badge">
+                        {isHackathonProject ? 'Hackathon' : 'Personal project'}
+                        {teamLimit ? ` · max ${teamLimit} members` : ''}
+                    </span>
+                </div>
+            </header>
 
-                {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                    {/* Left Column - Project Info */}
-                    <div className="lg:col-span-2 space-y-4 md:space-y-6">
-                        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-5 md:p-8">
-                            <div className="flex items-start justify-between mb-6">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                        <Lightbulb className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                                    </div>
-                                    <div>
-                                        <h1 className="text-xl md:text-3xl font-bold text-white mb-1 md:mb-2">{idea.title}</h1>
-                                        <div className="flex flex-wrap items-center gap-2 md:space-x-3 text-gray-400 text-xs md:text-sm">
-                                            <div className="flex items-center space-x-1">
-                                                <User className="w-4 h-4" />
-                                                <span>{idea.createdBy?.name || 'Anonymous'}</span>
-                                            </div>
-                                            <span>•</span>
-                                            <div className="flex items-center space-x-1">
-                                                <Calendar className="w-4 h-4" />
-                                                <span>{formatDate(idea.createdAt)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button className="p-2 bg-gray-700/50 rounded-xl hover:bg-gray-600/50 transition-colors duration-200">
-                                    <Share2 className="w-5 h-5 text-gray-300" />
-                                </button>
-                            </div>
+            {/* Tabs */}
+            <nav className="tabs mb-8">
+                {tabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        disabled={tab.disabled}
+                        onClick={() => {
+                            if (tab.id === 'overview') {
+                                setActiveTab('overview');
+                            } else if (tab.id === 'dashboard') {
+                                navigate(`/team/${id}`);
+                            }
+                        }}
+                        className={`tab inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:text-subtle disabled:hover:text-subtle ${activeTab === tab.id ? 'tab-active' : ''}`}
+                        title={tab.disabled ? 'Only team members can open the dashboard' : undefined}
+                    >
+                        {tab.label}
+                        {tab.id === 'dashboard' && tab.disabled && (
+                            <Lock className="h-3.5 w-3.5" strokeWidth={2} />
+                        )}
+                    </button>
+                ))}
+            </nav>
 
-                            <div className="prose prose-invert max-w-none mb-8">
-                                <h3 className="text-xl font-semibold text-white mb-3">About the Project</h3>
-                                <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {idea.description}
-                                </p>
-                            </div>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+                {/* Main column */}
+                <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
+                    <section>
+                        <h2 className="section-title mb-2">About</h2>
+                        <p className="whitespace-pre-line text-sm leading-relaxed text-fg/90">
+                            {idea.description}
+                        </p>
+                    </section>
 
-                            {/* Required Skills Section */}
-                            {idea.skillsRequired && idea.skillsRequired.length > 0 && (
-                                <div className="mb-8">
-                                    <h3 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-                                        <Code className="w-5 h-5 text-blue-400" />
-                                        Required Skills
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {Array.isArray(idea.skillsRequired) ? idea.skillsRequired.map((skill, index) => (
-                                            <span
-                                                key={index}
-                                                className="px-4 py-2 bg-blue-500/10 text-blue-300 rounded-xl text-sm font-medium border border-blue-500/20"
-                                            >
-                                                {skill}
-                                            </span>
-                                        )) : (
-                                            // Handle case where it might be a comma-separated string from older data
-                                            idea.skillsRequired.toString().split(',').map((skill, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-4 py-2 bg-blue-500/10 text-blue-300 rounded-xl text-sm font-medium border border-blue-500/20"
-                                                >
-                                                    {skill.trim()}
-                                                </span>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Hackathon Details Section */}
-                            {idea.projectType === 'hackathon' && idea.hackathon && (
-                                <div className="mb-8 p-6 bg-purple-500/10 rounded-2xl border border-purple-500/20">
-                                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                                        <Zap className="w-5 h-5 text-yellow-400" />
-                                        Hackathon Details
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="bg-gray-800/50 p-4 rounded-xl">
-                                                <div className="text-gray-400 text-sm mb-1">Max Team Size</div>
-                                                <div className="text-white font-semibold text-lg flex items-center gap-2">
-                                                    <Users className="w-5 h-5 text-purple-400" />
-                                                    {idea.hackathon.maxTeamSize} Members
-                                                </div>
-                                            </div>
-                                            <div className="bg-gray-800/50 p-4 rounded-xl">
-                                                <div className="text-gray-400 text-sm mb-1">Status</div>
-                                                <div className="text-green-400 font-semibold text-lg flex items-center gap-2">
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                                    Active
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {idea.hackathon.description && (
-                                            <div>
-                                                <div className="text-gray-400 text-sm mb-2">Goals & Timeline</div>
-                                                <p className="text-gray-300 bg-gray-800/50 p-4 rounded-xl leading-relaxed whitespace-pre-line">
-                                                    {idea.hackathon.description}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex flex-wrap gap-2 mb-8">
-                                {idea.tags && idea.tags.map((tag, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-4 py-2 bg-green-500/10 text-green-300 rounded-full text-sm border border-green-500/20 flex items-center gap-1"
-                                    >
-                                        <Tag className="w-3 h-3" />
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-6 border-t border-gray-700/50">
-                                <div className="flex items-center space-x-6">
-                                    <div className="flex items-center space-x-2 text-gray-300">
-                                        <Heart className="w-5 h-5 text-pink-500" />
-                                        <span className="font-medium">{Array.isArray(idea.likes) ? idea.likes.length : (idea.likes || 0)}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2 text-gray-300">
-                                        <MessageCircle className="w-5 h-5 text-blue-500" />
-                                        <span className="font-medium">{Array.isArray(idea.comments) ? idea.comments.length : (idea.comments || 0)}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2 text-gray-300">
-                                        <TrendingUp className="w-5 h-5 text-green-500" />
-                                        <span className="font-medium">{Array.isArray(idea.views) ? idea.views.length : (idea.views || 0)} views</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-                    </div>
-
-                    {/* Right Column - Team & Info */}
-                    <div className="space-y-6">
-                        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-                            <h3 className="text-xl font-bold text-white mb-4">Project Lead</h3>
-                            <div
-                                onClick={() => navigate(`/${idea.createdBy?.username}`)}
-                                className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/30 p-2 rounded-xl transition-colors duration-200"
-                            >
-                                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                                    {idea.createdBy?.name?.charAt(0) || <User />}
-                                </div>
-                                <div>
-                                    <div className="text-white font-medium">{idea.createdBy?.name || 'Anonymous'}</div>
-                                    <div className="text-gray-400 text-sm">@{idea.createdBy?.username}</div>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 space-y-3">
-                                <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2">
-                                    <Mail className="w-4 h-4" />
-                                    <span>Contact Lead</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-bold text-white">Team</h3>
-                                {idea.hackathon?.isHackathon && (
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${idea.teamMembers?.length >= idea.hackathon.maxTeamSize
-                                        ? 'bg-red-500/20 text-red-300 border-red-500/30'
-                                        : 'bg-green-500/20 text-green-300 border-green-500/30'
-                                        }`}>
-                                        {idea.teamMembers?.length || 0}/{idea.hackathon.maxTeamSize}
-                                    </span>
+                    {skills.length > 0 && (
+                        <section>
+                            <h2 className="section-title mb-3">Required skills</h2>
+                            <div className="flex flex-wrap gap-1.5">
+                                {skills.map((skill, index) =>
+                                    user?.skills?.includes(skill) ? (
+                                        <span key={index} className="chip-accent" title="You have this skill">
+                                            <Check className="h-3 w-3" strokeWidth={3} />
+                                            {skill}
+                                        </span>
+                                    ) : (
+                                        <span key={index} className="chip">{skill}</span>
+                                    )
                                 )}
                             </div>
+                        </section>
+                    )}
 
-                            {/* MEMBER LIST - VISIBLE ONLY TO TEAM MEMBERS/OWNER */}
-                            {(isOwner || isMember) && idea.teamMembers?.length > 0 && (
-                                <div className="mb-6 space-y-3">
-                                    {idea.teamMembers.map((member) => (
-                                        <div key={member._id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-colors group">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                                    {member.avatar ? (
-                                                        <img src={member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
-                                                    ) : (
-                                                        member.name?.charAt(0).toUpperCase()
-                                                    )}
-                                                </div>
-                                                <div className="text-sm text-gray-300">
-                                                    <span className="font-medium text-white">{member.name}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                {member._id === idea.createdBy._id && (
-                                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
-                                                        Lead
-                                                    </span>
-                                                )}
-                                                {isOwner && member._id !== user?._id && (
-                                                    <button
-                                                        onClick={() => handleRemoveMember(member._id)}
-                                                        className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Remove Member"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                    {/* Hackathon details */}
+                    {isHackathonProject && idea.hackathon && (
+                        <section>
+                            <h2 className="section-title mb-3">Hackathon details</h2>
+                            <dl className="card grid grid-cols-2 divide-x divide-line">
+                                <div className="p-4">
+                                    <dt className="text-xs text-muted">Max team size</dt>
+                                    <dd className="mt-1 text-sm font-semibold text-fg">{idea.hackathon.maxTeamSize} members</dd>
+                                </div>
+                                <div className="p-4">
+                                    <dt className="text-xs text-muted">Status</dt>
+                                    <dd className="mt-1 flex items-center gap-2 text-sm font-semibold text-fg">
+                                        <span className="dot bg-success" />
+                                        Active
+                                    </dd>
+                                </div>
+                            </dl>
+                            {idea.hackathon.description && (
+                                <div className="mt-4">
+                                    <h3 className="eyebrow mb-1">Goals &amp; timeline</h3>
+                                    <p className="whitespace-pre-line text-sm leading-relaxed text-fg/90">
+                                        {idea.hackathon.description}
+                                    </p>
                                 </div>
                             )}
+                        </section>
+                    )}
 
-                            {/* OWNER VIEW: Show Pending Requests */}
-                            {isOwner ? (
-                                <div className="space-y-4">
-                                   
-
-                                    <div className="flex items-center space-x-2 text-gray-400 mb-2">
-                                        <Users className="w-5 h-5" />
-                                        <span>Manage Requests</span>
-                                    </div>
-
-                                    {pendingRequests.length === 0 ? (
-                                        <p className="text-gray-500 text-sm italic">No pending requests.</p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {pendingRequests.map((req) => (
-                                                <div key={req._id} className="bg-gray-700/30 p-3 rounded-xl border border-gray-600/30">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <div className="font-medium text-white text-sm">{req.requesterName}</div>
-                                                            <div className="text-xs text-gray-400">@{req.requesterUsername}</div>
-                                                        </div>
-                                                        <div className="flex space-x-1">
-                                                            <button
-                                                                onClick={() => handleAccept(req._id)}
-                                                                className="p-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition-colors"
-                                                                title="Accept"
-                                                            >
-                                                                <Check className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReject(req._id)}
-                                                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors"
-                                                                title="Reject"
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    {req.note && (
-                                                        <p className="text-xs text-gray-400 italic">"{req.note}"</p>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                /* USER VIEW: Join Button or Status */
-                                <div className="flex flex-col space-y-4">
-                                    {!isMember && (
-                                        <div className="flex items-center space-x-2 text-gray-400">
-                                            <Users className="w-5 h-5" />
-                                            <span>Open for collaboration</span>
-                                        </div>
-                                    )}
-
-                                    {isMember ? (
-                                        <div className="space-y-3">
-                                            <div className="w-full py-3 bg-green-500/10 border border-green-500/50 text-green-400 rounded-xl font-medium flex items-center justify-center space-x-2">
-                                                <Check className="w-5 h-5" />
-                                                <span>You are a member</span>
-                                            </div>
-                                            {idea.projectType !== 'personal' && (
-                                                <button
-                                                    onClick={() => navigate(`/team/${id}`)}
-                                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/20"
-                                                >
-                                                    <Shield className="w-4 h-4" />
-                                                    <span>Go to Team Dashboard</span>
-                                                </button>
-                                            )}
-                                            {!isOwner && (
-                                                <button
-                                                    onClick={handleLeaveTeam}
-                                                    className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2 text-sm"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                    <span>Leave Team</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        /* JOIN BUTTON / MAX LIMIT LOGIC */
-                                        idea.hackathon?.isHackathon && (idea.teamMembers?.length || 0) >= idea.hackathon.maxTeamSize ? (
-                                            <div className="w-full py-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-center font-bold flex items-center justify-center gap-2">
-                                                <Users className="w-5 h-5" />
-                                                Max user limit reached
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={handleJoinClick}
-                                                disabled={loadingJoin || requestStatus === 'pending'}
-                                                className={`w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-purple-900/20 ${loadingJoin || requestStatus === 'pending' ? 'opacity-75 cursor-not-allowed' : ''
-                                                    }`}
-                                            >
-                                                {loadingJoin ? (
-                                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                ) : requestStatus === 'pending' ? (
-                                                    'Request Pending'
-                                                ) : (
-                                                    'Request to Join'
-                                                )}
-                                            </button>
-                                        )
-                                    )}
-                                </div>
-                            )}
+                    {idea.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-x-2 gap-y-1">
+                            {idea.tags.map((tag, index) => (
+                                <span key={index} className="tag">#{tag.replace(/\s+/g, '')}</span>
+                            ))}
                         </div>
-                    </div>
-                    {/* Comments Section */}
-                    <div className="lg:col-span-3 mt-8 bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 md:p-8">
-                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <MessageCircle className="w-5 h-5 text-blue-400" />
-                            Discussion ({idea.comments?.length || 0})
-                        </h2>
+                    )}
 
-                        <div className="space-y-6 mb-8">
-                            {idea.comments?.length > 0 ? (
-                                idea.comments.map((comment, index) => (
-                                    <div key={index} className="flex gap-4 group animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
-                                        <div className="flex-shrink-0">
-                                            {comment.user?.avatar ? (
-                                                <img
-                                                    src={comment.user.avatar}
-                                                    alt={comment.user.name}
-                                                    className="w-10 h-10 rounded-full object-cover border-2 border-slate-700/50 group-hover:border-blue-500/50 transition-colors duration-300"
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-600 border border-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-105 transition-transform duration-300">
-                                                    {comment.user?.name?.charAt(0) || 'U'}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 p-4 rounded-2xl rounded-tl-sm hover:border-slate-600 transition-colors duration-300 shadow-sm">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-slate-200">
-                                                            {comment.user?.name || 'Unknown User'}
-                                                        </span>
-                                                        {comment.user?._id === idea.createdBy?._id && (
-                                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                                                Owner
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-slate-500 font-medium">
-                                                        {new Date(comment.createdAt).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                                                    {comment.text}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-12 rounded-2xl bg-slate-800/30 border border-slate-700/30 border-dashed">
-                                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-800 rounded-full flex items-center justify-center">
-                                        <MessageCircle className="w-8 h-8 text-slate-500" />
-                                    </div>
-                                    <h3 className="text-slate-300 font-medium mb-1">No comments yet</h3>
-                                    <p className="text-slate-500 text-sm">Be the first to start the conversation!</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Comment Input */}
-                        {user ? (
-                            <div className="flex gap-4 items-start">
-                                <div className="flex-shrink-0">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                        {user.name?.charAt(0) || 'U'}
-                                    </div>
-                                </div>
-                                <div className="flex-1 relative">
-                                    <textarea
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        placeholder="Ask a question or share your thoughts..."
-                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 min-h-[100px] resize-y"
-                                    />
-                                    <div className="absolute bottom-3 right-3">
-                                        <button
-                                            onClick={handlePostComment}
-                                            disabled={!newComment.trim()}
-                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                            Post Comment
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-6 bg-blue-500/5 rounded-xl border border-blue-500/10">
-                                <p className="text-blue-200">Please <button onClick={() => navigate('/login')} className="text-blue-400 hover:underline font-medium">log in</button> to join the discussion.</p>
-                            </div>
-                        )}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line pt-4 text-sm text-muted">
+                        <span className="inline-flex items-center gap-1.5">
+                            <Heart className="h-4 w-4" strokeWidth={1.8} />
+                            <span className="font-semibold text-fg">{likeCount}</span> {likeCount === 1 ? 'like' : 'likes'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <MessageCircle className="h-4 w-4 -scale-x-100" strokeWidth={1.8} />
+                            <span className="font-semibold text-fg">{commentCount}</span> {commentCount === 1 ? 'comment' : 'comments'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <Eye className="h-4 w-4" strokeWidth={1.8} />
+                            <span className="font-semibold text-fg">{viewCount}</span> views
+                        </span>
                     </div>
                 </div>
+
+                {/* Sidebar */}
+                <aside className="card divide-y divide-line self-start lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+                    {/* Primary action for the viewer */}
+                    {!isOwner && (
+                        <div className="space-y-3 p-5">
+                            {isMember ? (
+                                <>
+                                    <p className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                        <span className="dot bg-success" />
+                                        You're a member
+                                    </p>
+                                    <button
+                                        onClick={() => navigate(`/team/${id}`)}
+                                        className="btn btn-primary w-full"
+                                    >
+                                        Open team dashboard
+                                    </button>
+                                    <button
+                                        onClick={handleLeaveTeam}
+                                        className="btn btn-danger w-full"
+                                    >
+                                        Leave team
+                                    </button>
+                                </>
+                            ) : (
+                                /* JOIN BUTTON / MAX LIMIT LOGIC */
+                                requestStatus === 'invited' ? (
+                                <>
+                                    <p className="text-sm text-fg">
+                                        <span className="font-semibold">{idea.createdBy?.name}</span> invited you to join this team.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleInviteResponse(true)} className="btn btn-primary flex-1">
+                                            Join team
+                                        </button>
+                                        <button onClick={() => handleInviteResponse(false)} className="btn btn-secondary flex-1">
+                                            Decline
+                                        </button>
+                                    </div>
+                                    {inviteError && <p className="text-xs text-danger">{inviteError}</p>}
+                                </>
+                                ) : (
+                                <>
+                                    <p className="text-sm text-muted">Open for collaboration</p>
+                                    {teamFull ? (
+                                        <p className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-center text-sm font-semibold text-danger">
+                                            Max user limit reached
+                                        </p>
+                                    ) : (
+                                        <button
+                                            onClick={handleJoinClick}
+                                            disabled={loadingJoin || requestStatus === 'pending'}
+                                            className={`btn w-full ${requestStatus === 'pending' ? 'btn-secondary' : 'btn-primary'}`}
+                                        >
+                                            {loadingJoin ? (
+                                                <span className="spinner h-4 w-4" />
+                                            ) : requestStatus === 'pending' ? (
+                                                'Request pending'
+                                            ) : (
+                                                'Request to join'
+                                            )}
+                                        </button>
+                                    )}
+                                </>
+                                )
+                            )}
+                        </div>
+                    )}
+
+                    {/* Project lead */}
+                    <div className="p-5">
+                        <h2 className="eyebrow mb-3">Project lead</h2>
+                        <button
+                            onClick={() => navigate(`/${idea.createdBy?.username}`)}
+                            className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-2"
+                        >
+                            <Avatar src={idea.createdBy?.avatar} name={idea.createdBy?.name} size="md" />
+                            <span className="min-w-0">
+                                <span className="block truncate text-sm font-semibold text-fg">{idea.createdBy?.name || 'Anonymous'}</span>
+                                <span className="block truncate text-xs text-muted">@{idea.createdBy?.username}</span>
+                            </span>
+                        </button>
+                        {!isOwner && user && (
+                            <button onClick={handleMessageLead} className="btn btn-secondary btn-sm mt-3 w-full">
+                                <MessageCircle className="h-4 w-4 -scale-x-100" strokeWidth={1.8} />
+                                Message {idea.createdBy?.name?.split(' ')[0] || 'lead'}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Team */}
+                    <div className="p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2 className="eyebrow">Team</h2>
+                            {teamLimit && (
+                                <span className={`text-xs font-semibold ${teamFull ? 'text-danger' : 'text-muted'}`}>
+                                    {memberCount}/{teamLimit}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* MEMBER LIST - VISIBLE ONLY TO TEAM MEMBERS/OWNER */}
+                        {(isOwner || isMember) && memberCount > 0 ? (
+                            <ul className="space-y-1">
+                                {idea.teamMembers.map((member) => (
+                                    <li key={member._id} className="flex items-center gap-3 py-1">
+                                        <Avatar src={member.avatar} name={member.name} size="sm" />
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{member.name}</span>
+                                        {member._id === idea.createdBy._id && (
+                                            <span className="text-xs text-subtle">Lead</span>
+                                        )}
+                                        {isOwner && member._id !== user?._id && (
+                                            <button
+                                                onClick={() => handleRemoveMember(member._id)}
+                                                className="icon-btn text-subtle hover:text-danger hover:opacity-100"
+                                                title="Remove member"
+                                                aria-label={`Remove ${member.name}`}
+                                            >
+                                                <X className="h-4 w-4" strokeWidth={2} />
+                                            </button>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted">
+                                {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* OWNER VIEW: invite people */}
+                    {isOwner && !teamFull && (
+                        <div className="p-5">
+                            <h2 className="eyebrow mb-3">Invite people</h2>
+                            <InvitePeople idea={idea} onTeamChanged={refreshIdea} />
+                        </div>
+                    )}
+
+                    {/* OWNER VIEW: Pending requests */}
+                    {isOwner && (
+                        <div className="p-5">
+                            <h2 className="eyebrow mb-3">
+                                Join requests{pendingRequests.length > 0 ? ` · ${pendingRequests.length}` : ''}
+                            </h2>
+                            {pendingRequests.length === 0 ? (
+                                <p className="text-sm text-subtle">No pending requests.</p>
+                            ) : (
+                                <ul className="space-y-4">
+                                    {pendingRequests.map((req) => (
+                                        <li key={req._id}>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar src={req.requester?.avatar} name={req.requesterName} size="sm" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-semibold text-fg">{req.requesterName}</div>
+                                                    {req.requesterUsername && (
+                                                        <div className="truncate text-xs text-muted">@{req.requesterUsername}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {req.note && (
+                                                <p className="mt-2 text-sm text-muted">“{req.note}”</p>
+                                            )}
+                                            <div className="mt-3 flex gap-2">
+                                                <button
+                                                    onClick={() => handleAccept(req._id)}
+                                                    className="btn btn-primary btn-sm flex-1"
+                                                >
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(req._id)}
+                                                    className="btn btn-secondary btn-sm flex-1"
+                                                >
+                                                    Decline
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </aside>
+
+                {/* Comments */}
+                <section className="min-w-0 lg:col-start-1 lg:row-start-2">
+                    <h2 className="section-title mb-4">
+                        Comments <span className="font-normal text-subtle">{idea.comments?.length || 0}</span>
+                    </h2>
+
+                    {idea.comments?.length > 0 ? (
+                        <div className="space-y-3">
+                            {idea.comments.map((comment, index) => (
+                                <div key={comment._id || index} className="flex gap-3 text-sm">
+                                    <Avatar src={comment.user?.avatar} name={comment.user?.name} size="xs" className="mt-0.5" />
+                                    <p className="min-w-0 flex-1 whitespace-pre-wrap break-words leading-relaxed">
+                                        <span className="mr-1.5 font-semibold text-fg">
+                                            {comment.user?.username || comment.user?.name || 'Unknown user'}
+                                        </span>
+                                        {comment.user?._id === idea.createdBy?._id && (
+                                            <span className="mr-1.5 text-xs text-subtle">Owner</span>
+                                        )}
+                                        <span className="text-fg/90">{comment.text}</span>
+                                        <span className="ml-2 text-xs text-subtle" title={formatDate(comment.createdAt)}>
+                                            {formatTimeAgo(comment.createdAt)}
+                                        </span>
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-subtle">No comments yet. Start the conversation.</p>
+                    )}
+
+                    {/* Comment input */}
+                    {user ? (
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handlePostComment();
+                            }}
+                            className="mt-4 flex items-center gap-3 border-t border-line pt-3"
+                        >
+                            <Avatar src={user.avatar} name={user.name} size="xs" />
+                            <input
+                                type="text"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                placeholder="Add a comment…"
+                                className="min-w-0 flex-1 bg-transparent text-sm text-fg placeholder:text-subtle focus:outline-none"
+                                aria-label="Add a comment"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newComment.trim()}
+                                className="link-btn"
+                            >
+                                Post
+                            </button>
+                        </form>
+                    ) : (
+                        <p className="mt-4 border-t border-line pt-3 text-sm text-muted">
+                            <button onClick={() => navigate('/login')} className="link-btn">Log in</button> to join the discussion.
+                        </p>
+                    )}
+                </section>
             </div>
         </div>
     );

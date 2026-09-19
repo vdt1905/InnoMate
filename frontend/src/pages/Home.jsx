@@ -1,35 +1,31 @@
-import { useEffect, useState } from 'react';
-import useAuthStore from '../Store/authStore';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  Bookmark,
-  Eye,
-  Star,
-  Clock,
-  User,
-  Target,
-  Zap,
-  TrendingUp,
-  Filter,
-  Search,
-  ChevronDown,
-  Sparkles,
-  Users,
-  Calendar,
-  ChevronUp,
-  X
-} from 'lucide-react';
-import React from 'react';
+import { Heart, MessageCircle, Send, Search, Check, Compass } from 'lucide-react';
+import useAuthStore from '../Store/authStore';
+import Avatar from '../components/Avatar';
+import HomeSidebar from '../components/HomeSidebar';
+
+const MATCH_FILTERS = [
+  { value: 'all', label: 'All matches' },
+  { value: 'high', label: 'Perfect match' },
+  { value: 'medium', label: 'Good match' },
+  { value: 'low', label: 'Worth exploring' },
+];
+
+// Native selects keep keyboard + mobile pickers; this just draws the chevron.
+const selectChevron = {
+  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a8a8a8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+  backgroundPosition: 'right 0.5rem center',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: '1.25em 1.25em',
+};
 
 const Home = () => {
   const navigate = useNavigate();
   const {
     getPersonalizedFeed,
     personalizedFeed,
-    loadingIdeas,
+    loadingFeed,
     toggleLikeIdea,
     addCommentToIdea,
     user
@@ -38,12 +34,12 @@ const Home = () => {
   // All state declarations properly inside component
   const [filterByScore, setFilterByScore] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
   const [openComments, setOpenComments] = useState({});
   const [likingStates, setLikingStates] = useState({});
   const [commentTexts, setCommentTexts] = useState({});
   const [commentingStates, setCommentingStates] = useState({});
+  const [copiedId, setCopiedId] = useState(null);
 
 
   // Check if likeIdea function exists
@@ -151,16 +147,16 @@ const Home = () => {
     }));
   };
 
-  const getMatchScoreColor = (score) => {
-    if (score >= 3) return 'from-emerald-500 to-green-500';
-    if (score >= 1) return 'from-amber-500 to-orange-500';
-    return 'from-slate-500 to-gray-500';
+  const getMatchDot = (score) => {
+    if (score >= 3) return 'bg-success';
+    if (score >= 1) return 'bg-warning';
+    return 'bg-subtle';
   };
 
   const getMatchScoreText = (score) => {
-    if (score >= 3) return 'Perfect Match';
-    if (score >= 1) return 'Good Match';
-    return 'Worth Exploring';
+    if (score >= 3) return 'Perfect match';
+    if (score >= 1) return 'Good match';
+    return 'Worth exploring';
   };
 
   const formatTimeAgo = (date) => {
@@ -178,444 +174,252 @@ const Home = () => {
     return 'Just now';
   };
 
+  const handleShare = async (ideaId) => {
+    const url = `${window.location.origin}/project/${ideaId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(ideaId);
+      setTimeout(() => setCopiedId((id) => (id === ideaId ? null : id)), 2000);
+    } catch {
+      window.prompt('Copy this link:', url);
+    }
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setFilterByScore('all');
     setSortBy('newest');
   };
 
+  const hasFilters = searchTerm || filterByScore !== 'all' || sortBy !== 'newest';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-        {/* Enhanced Header Section */}
+    <div className="mx-auto flex w-full max-w-[1120px] gap-8 px-4 py-6 md:px-8 md:py-10">
+      <div className="mx-auto w-full min-w-0 max-w-[680px] flex-1 xl:mx-0">
+      <header className="mb-6">
+        <h1 className="page-title">Home</h1>
+        <p className="page-subtitle">
+          Projects matched to your skills · {filteredAndSortedFeed.length}{' '}
+          {filteredAndSortedFeed.length === 1 ? 'project' : 'projects'}
+        </p>
+        {!user?.skills?.length && (
+          <p className="mt-3 text-sm text-muted">
+            Add skills to{' '}
+            <Link to={`/${user?.username}`} className="font-semibold text-link hover:underline">
+              your profile
+            </Link>{' '}
+            to get better matches.
+          </p>
+        )}
+      </header>
+
+      {/* Search + filters */}
+      <div className="mb-8 space-y-3">
         <div className="relative">
-          <div className="absolute -inset-2 bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-3xl blur-xl" />
-          <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-              <div className="flex items-center space-x-6">
-                <div className="relative flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <Target className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent leading-tight">
-                    Your Feed
-                  </h1>
-                  <p className="text-gray-400 text-base lg:text-lg mt-1">Projects curated just for you</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:flex-shrink-0">
-                <div className="flex items-center justify-center space-x-3 px-5 py-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-sm">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
-                  <span className="text-emerald-400 font-semibold text-sm lg:text-base">
-                    {filteredAndSortedFeed.length} projects
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-center space-x-3 px-5 py-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl backdrop-blur-sm">
-                  <Users className="w-5 h-5 text-violet-400" />
-                  <span className="text-violet-400 font-semibold text-sm lg:text-base">
-                    {user?.skills?.length || 0} skills
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+          <input
+            type="text"
+            placeholder="Search projects or skills"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input pl-9"
+          />
         </div>
-
-        {/* Enhanced Search and Filter Controls with Fixed Z-Index */}
-        <div className="relative z-30">
-          <div className="absolute -inset-1 bg-gradient-to-r from-violet-600/10 to-cyan-600/10 rounded-2xl blur-lg" />
-          <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <div className="flex flex-col gap-4">
-              {/* Search Bar - Full Width */}
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-violet-400 transition-colors duration-200" />
-                <input
-                  type="text"
-                  placeholder="Search projects, skills, or creators..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 focus:bg-white/10 transition-all duration-200"
-                />
-              </div>
-
-              {/* Filter Controls with Proper Spacing and Z-Index */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Match Filter with Higher Z-Index */}
-                <div className="relative flex-1 sm:flex-none sm:min-w-[180px] z-40">
-                  <button
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="w-full flex items-center justify-between px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all duration-200 relative z-40"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Filter className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-medium truncate">
-                        {filterByScore === 'all' ? 'All Matches' :
-                          filterByScore === 'high' ? 'Perfect Match' :
-                            filterByScore === 'medium' ? 'Good Match' : 'Worth Exploring'}
-                      </span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${isFilterOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {/* Dropdown with Proper Z-Index and Positioning */}
-                  {isFilterOpen && (
-                    <>
-                      {/* Backdrop to close dropdown when clicking outside */}
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setIsFilterOpen(false)}
-                      />
-
-                      {/* Dropdown Menu */}
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                        {[
-                          { value: 'all', label: 'All Matches', icon: Target },
-                          { value: 'high', label: 'Perfect Match', icon: Star },
-                          { value: 'medium', label: 'Good Match', icon: Zap },
-                          { value: 'low', label: 'Worth Exploring', icon: Eye }
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setFilterByScore(option.value);
-                              setIsFilterOpen(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left hover:bg-white/10 transition-colors duration-200 flex items-center space-x-3 ${filterByScore === option.value ? 'bg-violet-500/20 text-violet-300' : 'text-gray-300'
-                              }`}
-                          >
-                            <option.icon className="w-4 h-4 flex-shrink-0" />
-                            <span className="text-sm font-medium">{option.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Sort Filter */}
-                <div className="flex-1 sm:flex-none sm:min-w-[160px]">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 focus:bg-white/10 transition-all duration-200 appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.75rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em'
-                    }}
-                  >
-                    <option value="newest" className="bg-gray-800 text-white">Newest First</option>
-                    <option value="oldest" className="bg-gray-800 text-white">Oldest First</option>
-                    <option value="mostLiked" className="bg-gray-800 text-white">Most Liked</option>
-                    <option value="bestMatch" className="bg-gray-800 text-white">Best Match</option>
-                  </select>
-                </div>
-
-                {/* Clear Filters */}
-                {(searchTerm || filterByScore !== 'all' || sortBy !== 'newest') && (
-                  <div className="flex-1 sm:flex-none">
-                    <button
-                      onClick={clearFilters}
-                      className="w-full px-6 py-4 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all duration-200 font-medium"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Section with Lower Z-Index */}
-        <div className="relative z-10">
-          {loadingIdeas ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="relative mb-6">
-                <div className="w-20 h-20 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-                <div className="absolute inset-0 w-20 h-20 border-4 border-cyan-500/30 border-b-cyan-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-              </div>
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-white mb-2">Curating your feed</h3>
-                <p className="text-gray-400">Finding the perfect projects for you...</p>
-              </div>
-            </div>
-          ) : filteredAndSortedFeed.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-32 h-32 bg-gradient-to-r from-violet-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
-                <Target className="w-16 h-16 text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-4">
-                {searchTerm || filterByScore !== 'all' ? 'No matches found' : 'No projects yet'}
-              </h3>
-              <p className="text-gray-400 text-lg max-w-md mx-auto mb-8">
-                {searchTerm || filterByScore !== 'all'
-                  ? 'Try adjusting your search terms or filters to find more projects.'
-                  : 'Complete your profile with skills to get personalized project recommendations.'}
-              </p>
-              {(searchTerm || filterByScore !== 'all') && (
-                <button
-                  onClick={clearFilters}
-                  className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all duration-200 font-semibold"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {filteredAndSortedFeed.map((idea, index) => (
-                <div key={idea._id} className="group relative">
-                  {/* Enhanced Glow effect */}
-                  <div className="absolute -inset-2 bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-
-                  <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 hover:border-violet-500/30 rounded-3xl p-8 transition-all duration-300 hover:bg-white/10">
-                    {/* Enhanced Header */}
-                    <div className="mb-6">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-3 mb-3">
-                            <h3 className="text-xl lg:text-2xl font-bold text-white group-hover:text-violet-300 transition-colors duration-200 leading-tight">
-                              {idea.title}
-                            </h3>
-
-                            {/* Enhanced Match Score Badge */}
-                            <div className={`flex-shrink-0 px-4 py-2 bg-gradient-to-r ${getMatchScoreColor(idea.matchScore)} rounded-full flex items-center space-x-2 shadow-lg`}>
-                              <Star className="w-4 h-4 text-white" />
-                              <span className="text-white text-sm font-bold">
-                                {getMatchScoreText(idea.matchScore)}
-                              </span>
-                              <span className="text-white/80 text-xs">
-                                ({idea.matchScore}/3)
-                              </span>
-                            </div>
-                          </div>
-
-                          <p className="text-gray-300 text-base lg:text-lg leading-relaxed">
-                            {idea.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Skills and Tags */}
-                    <div className="space-y-4 mb-6">
-                      {idea.skillsRequired && idea.skillsRequired.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wide">Required Skills</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {idea.skillsRequired.map((skill, index) => (
-                              <span
-                                key={index}
-                                className={`px-4 py-2 text-sm font-medium rounded-xl border transition-all duration-200 ${user?.skills?.includes(skill)
-                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-lg shadow-emerald-500/10'
-                                  : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
-                                  }`}
-                              >
-                                {skill}
-                                {user?.skills?.includes(skill) && (
-                                  <span className="ml-2">✓</span>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {idea.tags && idea.tags.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wide">Tags</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {idea.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="px-4 py-2 bg-violet-500/20 text-violet-300 border border-violet-500/30 text-sm font-medium rounded-xl hover:bg-violet-500/30 transition-colors duration-200"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Enhanced Footer */}
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pt-6 border-t border-white/10">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-6">
-                        <div className="flex items-center space-x-3">
-                          <Link to={`/${idea.createdBy?.username}`} className="flex items-center space-x-3 group/user hover:opacity-80 transition-opacity">
-                            <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
-                              <User className="w-6 h-6 text-white" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-white font-semibold text-sm lg:text-base truncate group-hover/user:text-violet-300 transition-colors">
-                                {idea.createdBy?.name || 'Unknown Creator'}
-                              </p>
-                              <p className="text-gray-400 text-xs lg:text-sm truncate">
-                                @{idea.createdBy?.username || 'unknown'}
-                              </p>
-                            </div>
-                          </Link>
-                        </div>
-
-                        <div className="flex items-center space-x-2 text-gray-400">
-                          <Calendar className="w-4 h-4 flex-shrink-0" />
-                          <span className="text-xs lg:text-sm">
-                            {formatTimeAgo(idea.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Enhanced Action Buttons with Better Alignment */}
-                      <div className="flex items-center justify-center lg:justify-end gap-2 lg:flex-shrink-0">
-                        {/* View Details Button */}
-                        <button
-                          onClick={() => handleViewDetails(idea)}
-                          className="flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30 rounded-xl hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 font-medium"
-                        >
-                          <Eye className="w-4 lg:w-5 h-4 lg:h-5" />
-                          <span className="text-sm">Details</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleLike(idea._id)}
-                          disabled={likingStates[idea._id] || !user?._id}
-                          className={`flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden ${isLikedByUser(idea)
-                            ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 shadow-lg shadow-red-500/10'
-                            : 'bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 border border-white/10 hover:border-red-500/30'
-                            } ${likingStates[idea._id] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${!user?._id ? 'cursor-not-allowed opacity-30' : ''}`}
-                        >
-                          {likingStates[idea._id] ? (
-                            <div className="w-4 lg:w-5 h-4 lg:h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Heart className={`w-4 lg:w-5 h-4 lg:h-5 transition-all duration-200 ${isLikedByUser(idea) ? 'fill-current scale-110' : ''
-                              }`} />
-                          )}
-                          <span className="text-sm font-semibold">
-                            {idea.likes?.length || 0}
-                          </span>
-                          {isLikedByUser(idea) && !likingStates[idea._id] && (
-                            <div className="absolute inset-0 bg-red-500/10 rounded-xl animate-pulse" />
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => toggleComments(idea._id)}
-                          className={`flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 rounded-xl font-medium transition-all duration-200 ${openComments[idea._id]
-                            ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                            : 'bg-white/5 text-gray-400 hover:bg-violet-500/20 hover:text-violet-400 border border-white/10 hover:border-violet-500/30'
-                            }`}
-                        >
-                          <MessageCircle className="w-4 lg:w-5 h-4 lg:h-5" />
-                          <span className="text-sm">{idea.comments?.length || 0}</span>
-                          {openComments[idea._id] ? (
-                            <ChevronUp className="w-3 h-3" />
-                          ) : (
-                            <ChevronDown className="w-3 h-3" />
-                          )}
-                        </button>
-
-                        <button className="flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 bg-white/5 text-gray-400 hover:bg-cyan-500/20 hover:text-cyan-400 border border-white/10 hover:border-cyan-500/30 rounded-xl font-medium transition-all duration-200">
-                          <Share2 className="w-4 lg:w-5 h-4 lg:h-5" />
-                        </button>
-
-                        <button className="flex items-center justify-center space-x-2 px-3 lg:px-4 py-3 bg-white/5 text-gray-400 hover:bg-amber-500/20 hover:text-amber-400 border border-white/10 hover:border-amber-500/30 rounded-xl font-medium transition-all duration-200">
-                          <Bookmark className="w-4 lg:w-5 h-4 lg:h-5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Comments Section */}
-                    {openComments[idea._id] && (
-                      <div className="mt-6 pt-6 border-t border-white/10">
-                        <div className="space-y-4">
-                          <h4 className="text-lg font-semibold text-white mb-4">Comments</h4>
-
-                          {/* Comment Input */}
-                          <div className="flex space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <User className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="flex-1">
-                              <textarea
-                                placeholder="Add a comment..."
-                                value={commentTexts[idea._id] || ''}
-                                onChange={(e) => updateCommentText(idea._id, e.target.value)}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 focus:bg-white/10 transition-all duration-200"
-                                rows="3"
-                              />
-                              <div className="flex justify-end mt-2">
-                                <button
-                                  onClick={() => handlePostComment(idea._id)}
-                                  disabled={commentingStates[idea._id] || !commentTexts[idea._id]?.trim()}
-                                  className={`px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg hover:from-violet-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all duration-200 font-medium text-sm flex items-center space-x-2 ${commentingStates[idea._id] || !commentTexts[idea._id]?.trim()
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : 'cursor-pointer'
-                                    }`}
-                                >
-                                  {commentingStates[idea._id] ? (
-                                    <>
-                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                      <span>Posting...</span>
-                                    </>
-                                  ) : (
-                                    <span>Post Comment</span>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Comments List */}
-                          <div className="space-y-3">
-                            {idea.comments && idea.comments.length > 0 ? (
-                              idea.comments.map((comment, commentIndex) => (
-                                <div key={commentIndex} className="flex space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                                  <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <User className="w-4 h-4 text-white" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <span className="text-white font-medium text-sm">
-                                        {comment.user?.name ? `${comment.user.name} (@${comment.user.username})` : 'Anonymous'}
-                                      </span>
-                                      <span className="text-gray-400 text-xs">
-                                        {formatTimeAgo(comment.createdAt)}
-                                      </span>
-                                    </div>
-                                    <p className="text-gray-300 text-sm leading-relaxed">
-                                      {comment.text}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-8">
-                                <MessageCircle className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                                <p className="text-gray-400">No comments yet. Be the first to comment!</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={filterByScore}
+            onChange={(e) => setFilterByScore(e.target.value)}
+            className="input w-auto cursor-pointer appearance-none pr-8"
+            style={selectChevron}
+            aria-label="Filter by match"
+          >
+            {MATCH_FILTERS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="input w-auto cursor-pointer appearance-none pr-8"
+            style={selectChevron}
+            aria-label="Sort"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="mostLiked">Most liked</option>
+            <option value="bestMatch">Best match</option>
+          </select>
+          {hasFilters && (
+            <button onClick={clearFilters} className="link-btn ml-1">
+              Clear
+            </button>
           )}
         </div>
-
-        {/* Details Modal with Proper Z-Index */}
       </div>
+
+      {loadingFeed ? (
+        <div className="empty">
+          <span className="spinner" />
+        </div>
+      ) : filteredAndSortedFeed.length === 0 ? (
+        <div className="empty">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-fg">
+            <Compass className="h-8 w-8" strokeWidth={1.5} />
+          </span>
+          <h3 className="empty-title">
+            {searchTerm || filterByScore !== 'all' ? 'No matching projects' : 'No projects yet'}
+          </h3>
+          <p className="empty-text">
+            {searchTerm || filterByScore !== 'all'
+              ? 'Try a different search or filter.'
+              : 'Add skills to your profile to get personalised recommendations.'}
+          </p>
+          {hasFilters && (
+            <button onClick={clearFilters} className="btn btn-primary mt-5">
+              Clear filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredAndSortedFeed.map((idea) => {
+            const liked = isLikedByUser(idea);
+            const likeCount = idea.likes?.length || 0;
+            const commentCount = idea.comments?.length || 0;
+
+            return (
+              <article key={idea._id} className="card card-hover p-5">
+                {/* Author */}
+                <div className="flex items-center gap-3">
+                  <Link to={`/${idea.createdBy?.username}`}>
+                    <Avatar src={idea.createdBy?.avatar} name={idea.createdBy?.name} size="sm" />
+                  </Link>
+                  <div className="min-w-0 flex-1 truncate text-sm">
+                    <Link to={`/${idea.createdBy?.username}`} className="font-semibold text-fg hover:text-muted">
+                      {idea.createdBy?.username || 'unknown'}
+                    </Link>
+                    <span className="text-subtle"> · {formatTimeAgo(idea.createdAt)}</span>
+                  </div>
+                  <span className="badge shrink-0" title={`${idea.matchScore} of your skills match`}>
+                    <span className={`dot ${getMatchDot(idea.matchScore)}`} />
+                    {getMatchScoreText(idea.matchScore)}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <button onClick={() => handleViewDetails(idea)} className="mt-4 block text-left">
+                  <h2 className="text-lg font-semibold leading-snug text-fg hover:underline">{idea.title}</h2>
+                </button>
+                <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-fg/90">{idea.description}</p>
+
+                {idea.skillsRequired?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {idea.skillsRequired.map((skill) =>
+                      user?.skills?.includes(skill) ? (
+                        <span key={skill} className="chip-accent" title="You have this skill">
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                          {skill}
+                        </span>
+                      ) : (
+                        <span key={skill} className="chip">{skill}</span>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {idea.tags?.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1">
+                    {idea.tags.map((tag) => (
+                      <span key={tag} className="tag">#{tag.replace(/\s+/g, '')}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={() => handleLike(idea._id)}
+                    disabled={likingStates[idea._id] || !user?._id}
+                    className="icon-btn -ml-1.5"
+                    aria-label={liked ? 'Unlike' : 'Like'}
+                  >
+                    <Heart className={`h-6 w-6 ${liked ? 'fill-danger text-danger' : ''}`} strokeWidth={1.8} />
+                  </button>
+                  <button onClick={() => toggleComments(idea._id)} className="icon-btn" aria-label="Comments">
+                    <MessageCircle className="h-6 w-6 -scale-x-100" strokeWidth={1.8} />
+                  </button>
+                  <button onClick={() => handleShare(idea._id)} className="icon-btn" aria-label="Copy link">
+                    <Send className="h-6 w-6" strokeWidth={1.8} />
+                  </button>
+                  {copiedId === idea._id && <span className="text-xs text-muted">Link copied</span>}
+
+                  <button onClick={() => handleViewDetails(idea)} className="btn btn-secondary btn-sm ml-auto">
+                    View project
+                  </button>
+                </div>
+
+                <p className="mt-2 text-sm font-semibold text-fg">
+                  {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+                </p>
+
+                {/* Comments */}
+                {commentCount > 0 && !openComments[idea._id] && (
+                  <button onClick={() => toggleComments(idea._id)} className="mt-1 text-sm text-subtle hover:text-muted">
+                    View {commentCount === 1 ? '1 comment' : `all ${commentCount} comments`}
+                  </button>
+                )}
+
+                {openComments[idea._id] && (
+                  <div className="mt-3 space-y-3">
+                    {idea.comments?.map((comment, commentIndex) => (
+                      <div key={comment._id || commentIndex} className="flex gap-3 text-sm">
+                        <Avatar src={comment.user?.avatar} name={comment.user?.name} size="xs" className="mt-0.5" />
+                        <p className="min-w-0 flex-1 leading-relaxed">
+                          <span className="mr-1.5 font-semibold text-fg">{comment.user?.username || 'anonymous'}</span>
+                          <span className="text-fg/90">{comment.text}</span>
+                          <span className="ml-2 text-xs text-subtle">{formatTimeAgo(comment.createdAt)}</span>
+                        </p>
+                      </div>
+                    ))}
+                    {commentCount > 0 && (
+                      <button onClick={() => toggleComments(idea._id)} className="text-xs text-subtle hover:text-muted">
+                        Hide comments
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handlePostComment(idea._id);
+                  }}
+                  className="mt-3 flex items-center gap-3 border-t border-line pt-3"
+                >
+                  <input
+                    type="text"
+                    placeholder="Add a comment…"
+                    value={commentTexts[idea._id] || ''}
+                    onChange={(e) => updateCommentText(idea._id, e.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-fg placeholder:text-subtle focus:outline-none"
+                    aria-label="Add a comment"
+                  />
+                  <button
+                    type="submit"
+                    disabled={commentingStates[idea._id] || !commentTexts[idea._id]?.trim()}
+                    className="link-btn"
+                  >
+                    {commentingStates[idea._id] ? 'Posting…' : 'Post'}
+                  </button>
+                </form>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      </div>
+
+      <HomeSidebar />
     </div>
   );
 };

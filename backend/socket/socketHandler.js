@@ -37,6 +37,9 @@ export const socketHandler = (io) => {
     io.on('connection', (socket) => {
         console.log('A user connected:', socket.id, socket.user.username);
 
+        // A personal room, so direct messages reach every tab this user has open.
+        socket.join(`user:${socket.user._id}`);
+
         socket.on('joinRoom', async (teamId) => {
             // Without this check any signed-in user could listen in on any
             // team's chat just by knowing the project id.

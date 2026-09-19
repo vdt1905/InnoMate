@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, User, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { GridScan } from '../components/GridScanLazy';
+import AuthLayout from '../components/AuthLayout';
+import GoogleButton, { OrDivider } from '../components/GoogleButton';
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
-  const [focusedField, setFocusedField] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const { login, loading, error, clearError } = useAuthStore();
+  const navigate = useNavigate();
 
   // Errors live in the store, so without this a failed attempt here would still
   // be on screen after navigating to Register and back.
@@ -21,8 +21,6 @@ export default function Login() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const navigate = useNavigate();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     // login() resolves to null on bad credentials and sets `error`. Navigating
@@ -32,220 +30,75 @@ export default function Login() {
     if (result) navigate('/home');
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  // Handle Enter key press
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
-    }
-  };
-
   return (
-    <div className="min-h-screen relative overflow-hidden bg-black flex items-center justify-center p-4">
-      {/* GridScan Background */}
-      <div className="absolute inset-0 z-0">
-        <GridScan
-          sensitivity={0.55}
-          lineThickness={1}
-          linesColor="#392e4e"
-          gridScale={0.1}
-          scanColor="#FF9FFC"
-          scanOpacity={0.4}
-          enablePost={true}
-          bloomIntensity={0.6}
-          chromaticAberration={0.002}
-          noiseIntensity={0.01}
-          style={{ width: '100%', height: '100%' }}
-        />
-      </div>
+    <AuthLayout
+      title="Log in to InnoMate"
+      subtitle="Welcome back. Pick up where your team left off."
+      footer={
+        <>
+          Don't have an account?{' '}
+          <Link to="/register" className="font-semibold text-link hover:underline">Sign up</Link>
+        </>
+      }
+    >
+      <GoogleButton />
+      <OrDivider />
 
-      {/* Navigation to Landing */}
-      <button
-        onClick={() => navigate('/')}
-        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        <span className="hidden sm:inline">Back</span>
-      </button>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {error && <div className="alert-error" role="alert">{error}</div>}
 
-      {/* Main Container */}
-      <div className="relative z-10 w-full max-w-md">
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 via-pink-600/30 to-cyan-600/30 rounded-2xl blur-xl"></div>
-
-        {/* Card container */}
-        <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
-          {/* Header */}
-          <div className="p-6 md:p-8 pb-6 text-center">
-            <User className="w-12 h-12 mx-auto text-white mb-4" />
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-              InnoMate
-            </h1>
-            <p className="text-gray-400 text-sm mt-2 tracking-wider">ACCESS PORTAL</p>
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div className="mx-8 mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-400" />
-                <p className="text-red-300 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Form */}
-          <div className="px-6 md:px-8 pb-8 space-y-6 md:space-y-8">
-            {/* Email/Username field */}
-            <div className="relative mt-4">
-              <div className="relative">
-                <User className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${focusedField === 'email' ? 'text-purple-400' : 'text-gray-500'
-                  }`} />
-                <input
-                  name="email"
-                  type="text"
-                  value={form.email}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                  onKeyDown={handleKeyDown}
-                  placeholder=" "
-                  className={`w-full pl-12 pr-4 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'email'
-                    ? 'border-purple-500/50 bg-purple-500/5'
-                    : 'border-gray-600/50 hover:border-gray-500/70'
-                    }`}
-                />
-                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${focusedField === 'email' || form.email ?
-                  'text-xs text-purple-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' :
-                  'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-purple-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
-                  }`}>
-                  Email or Username
-                </label>
-              </div>
-            </div>
-
-            {/* Password field */}
-            <div className="relative mt-8">
-              <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 z-20 ${focusedField === 'password' ? 'text-cyan-400' : 'text-gray-500'
-                  }`} />
-                <input
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  onKeyDown={handleKeyDown}
-                  placeholder=" "
-                  className={`w-full pl-12 pr-12 py-4 bg-white/5 border rounded-xl text-white transition-all duration-200 focus:outline-none peer ${focusedField === 'password'
-                    ? 'border-cyan-500/50 bg-cyan-500/5'
-                    : 'border-gray-600/50 hover:border-gray-500/70'
-                    }`}
-                />
-                <label className={`absolute transition-all duration-200 pointer-events-none z-10 ${focusedField === 'password' || form.password ?
-                  'text-xs text-cyan-400 -top-2.5 left-12 bg-gray-900 px-2 rounded' :
-                  'text-gray-400 top-4 left-12 peer-placeholder-shown:top-4 peer-placeholder-shown:left-12 peer-focus:-top-2.5 peer-focus:left-12 peer-focus:text-xs peer-focus:text-cyan-400 peer-focus:bg-gray-900 peer-focus:px-2 peer-focus:rounded'
-                  }`}>
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200 z-20"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit button */}
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading || !form.email || !form.password}
-              className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-purple-500 hover:to-cyan-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-            >
-              <span className="flex items-center justify-center space-x-3">
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>AUTHENTICATING...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Login</span>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
-                  </>
-                )}
-              </span>
-            </button>
-          </div>
-
-          {/* Google Sign In */}
-          <div className="px-8 pb-4">
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const { auth, googleProvider } = await import('../firebase');
-                  const { signInWithPopup } = await import('firebase/auth');
-                  const result = await signInWithPopup(auth, googleProvider);
-                  const { user } = result;
-                  const token = await user.getIdToken();
-                  console.log("Google Token Generated");
-                  // Call store action
-                  const { googleLogin } = useAuthStore.getState();
-                  const ok = await googleLogin({ token });
-                  if (ok) navigate('/home');
-                } catch (error) {
-                  console.error("Google Sign In Error", error);
-                }
-              }}
-              className="w-full bg-white text-gray-900 font-semibold py-4 px-8 rounded-xl hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-3"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-          </div>
-
-          {/* New to InnoMate? */}
-          <div className="px-8 pb-6 text-center">
-            <p className="text-gray-400 text-sm">
-              New to InnoMate?{' '}
-              <button
-                onClick={() => navigate('/register')}
-                className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
-              >
-                Create Account
-              </button>
-            </p>
-          </div>
-
-          {/* Bottom accent */}
-          <div className="h-1 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-b-2xl"></div>
+        <div>
+          <label htmlFor="email" className="label">Email or username</label>
+          <input
+            id="email"
+            name="email"
+            type="text"
+            autoComplete="username"
+            value={form.email}
+            onChange={handleChange}
+            className="input py-2.5"
+            autoFocus
+          />
         </div>
-      </div>
-    </div >
+
+        <div>
+          <label htmlFor="password" className="label">Password</label>
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={form.password}
+              onChange={handleChange}
+              className="input py-2.5 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-subtle transition-colors hover:text-fg"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !form.email || !form.password}
+          className="btn btn-primary w-full py-2.5"
+        >
+          {loading ? (
+            <>
+              <span className="spinner h-4 w-4" />
+              Logging in…
+            </>
+          ) : (
+            'Log in'
+          )}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }

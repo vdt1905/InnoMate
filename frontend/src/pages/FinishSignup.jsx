@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../Store/authStore';
-import { Loader2 } from 'lucide-react';
+import AuthLayout from '../components/AuthLayout';
 import React from 'react';
 export default function FinishSignup() {
     const navigate = useNavigate();
@@ -47,15 +47,16 @@ export default function FinishSignup() {
         processLink();
     }, [completeLoginWithLink, navigate, user]);
 
+    const working = status === 'Verifying link...' || status === 'Completing sign in...';
+
     return (
-        <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <AuthLayout>
             <div className="text-center">
-                {status === 'Verifying link...' || status === 'Completing sign in...' ? (
-                    <Loader2 className="w-12 h-12 animate-spin mx-auto text-purple-500 mb-4" />
-                ) : null}
-                <h2 className="text-2xl font-bold mb-2">{status}</h2>
-                {storeError && <p className="text-red-400">{storeError}</p>}
+                {working && <span className="spinner mx-auto mb-4 block h-8 w-8" />}
+                <h1 className="text-lg font-semibold text-fg">{status}</h1>
+                {email && <p className="mt-1 text-sm text-muted">Signing in as {email}</p>}
+                {storeError && <p className="alert-error mt-4">{storeError}</p>}
             </div>
-        </div>
+        </AuthLayout>
     );
 }

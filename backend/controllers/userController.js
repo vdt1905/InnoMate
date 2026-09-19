@@ -117,10 +117,13 @@ export const searchUsers = async (req, res) => {
 
     let searchCriteria = {};
     if (query) {
+      // Escaped: raw input in $regex lets a crafted pattern hog the database.
+      const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       searchCriteria = {
         $or: [
-          { name: { $regex: query, $options: 'i' } },
-          { username: { $regex: query, $options: 'i' } }
+          { name: pattern },
+          { username: pattern },
+          { skills: pattern } // so "react" finds React developers too
         ]
       };
     }

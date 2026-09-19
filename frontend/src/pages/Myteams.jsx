@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, Crown, Eye, Sparkles, AlertCircle, ArrowRight, Calendar } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Users, Plus, MessageSquare, LayoutDashboard, Compass } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
+import Avatar from '../components/Avatar';
+
+const MAX_STACK = 4;
 
 export default function MyTeams() {
   const navigate = useNavigate();
@@ -14,6 +17,8 @@ export default function MyTeams() {
     loadingTeams,
     errorTeams,
   } = useAuthStore();
+
+  const [tab, setTab] = useState('lead');
 
   useEffect(() => {
     const initializeData = async () => {
@@ -28,149 +33,85 @@ export default function MyTeams() {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric',
     });
   };
 
-  const getTeamStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'active': return 'bg-emerald-500';
-      case 'completed': return 'bg-blue-500';
-      case 'paused': return 'bg-amber-500';
-      default: return 'bg-slate-500';
-    }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
-  };
-
   const TeamCard = ({ team, isLeader = false }) => {
-    return (
-      <div className="group relative bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-xl overflow-hidden transition-all duration-300 hover:border-slate-600/70 hover:shadow-lg">
-        <div className="p-6">
-          {/* Header with status indicator */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-white font-semibold text-lg">{team.title}</h3>
-                {isLeader && (
-                  <span className="px-2 py-1 bg-orange-500/80 text-white text-xs font-medium rounded-md flex items-center gap-1">
-                    <Crown className="w-3 h-3" />
-                    Leader
-                  </span>
-                )}
-              </div>
-              <p className="text-slate-400 text-sm mb-3 line-clamp-2">
-                {team.description || 'Building something amazing together...'}
-              </p>
-            </div>
-            <div className={`w-3 h-3 rounded-full ${getTeamStatusColor(team.status)} flex-shrink-0 mt-1`} />
-          </div>
+    const members = team.teamMembers || [];
+    const memberCount = members.length;
+    const pending = team.pendingRequests || 0;
+    const leaderName = isLeader ? 'You' : (team.createdBy?.name || team.createdBy?.username || 'Unknown');
 
-          {/* Required Skills Section */}
-          <div className="mb-4">
-            <div className="text-slate-500 text-xs uppercase tracking-wide font-medium mb-2">Required Skills</div>
-            <div className="flex flex-wrap gap-2">
-              {team.category && (
-                <span className="px-3 py-1 bg-slate-700/50 text-slate-300 text-xs rounded-md border border-slate-600/30">
-                  {team.category}
+    return (
+      <article className="card card-hover p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => navigate(`/project/${team._id}`)} className="min-w-0 text-left">
+                <h3 className="truncate text-base font-semibold text-fg hover:underline">{team.title}</h3>
+              </button>
+              <span className="badge">{isLeader ? 'Leader' : 'Member'}</span>
+              {isLeader && pending > 0 && (
+                <button onClick={() => navigate(`/project/${team._id}`)} className="chip-accent">
+                  {pending} {pending === 1 ? 'request' : 'requests'}
+                </button>
+              )}
+            </div>
+            {team.description && (
+              <p className="mt-1 line-clamp-2 text-sm text-muted">{team.description}</p>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-subtle">
+              {memberCount > 0 && (
+                <span className="flex -space-x-2">
+                  {members.slice(0, MAX_STACK).map((m, idx) => (
+                    <Avatar
+                      key={m._id || idx}
+                      src={m.avatar}
+                      name={m.name || m.username}
+                      size="xs"
+                      className="ring-2 ring-bg"
+                    />
+                  ))}
+                  {memberCount > MAX_STACK && (
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface-2 text-[10px] font-semibold text-muted ring-2 ring-bg">
+                      +{memberCount - MAX_STACK}
+                    </span>
+                  )}
                 </span>
               )}
-              {team.skillsRequired && team.skillsRequired.length > 0 ? (
-                team.skillsRequired.slice(0, 3).map((skill, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-slate-700/50 text-slate-300 text-xs rounded-md border border-slate-600/30">
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <>
-                  <span className="px-3 py-1 bg-slate-700/50 text-slate-300 text-xs rounded-md border border-slate-600/30">
-                    Collaboration
-                  </span>
-                  <span className="px-3 py-1 bg-slate-700/50 text-slate-300 text-xs rounded-md border border-slate-600/30">
-                    Communication
-                  </span>
-                </>
-              )}
+              <span className="text-muted">
+                {memberCount} {memberCount === 1 ? 'member' : 'members'}
+              </span>
+              <span>·</span>
+              <span>Led by {leaderName}</span>
+              <span>·</span>
+              <span>{formatDate(team.createdAt)}</span>
             </div>
           </div>
 
-          {/* Tags Section */}
-          <div className="mb-4">
-            <div className="text-slate-500 text-xs uppercase tracking-wide font-medium mb-2">Tags</div>
-            <div className="flex flex-wrap gap-2">
-              {team.tags && team.tags.length > 0 ? (
-                team.tags.slice(0, 3).map((tag, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-violet-500/20 text-violet-300 text-xs rounded border border-violet-500/30">
-                    #{tag}
-                  </span>
-                ))
-              ) : (
-                <>
-                  <span className="px-2 py-1 bg-violet-500/20 text-violet-300 text-xs rounded border border-violet-500/30">
-                    #teamwork
-                  </span>
-                  <span className="px-2 py-1 bg-violet-500/20 text-violet-300 text-xs rounded border border-violet-500/30">
-                    #collaboration
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom section with creator info and actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-700/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                {getInitials(team.createdBy?.name || team.createdBy?.username || 'U')}
-              </div>
-              <div>
-                <div className="text-white text-sm font-medium">
-                  {isLeader ? 'You' : (team.createdBy?.name || team.createdBy?.username || 'Unknown')}
-                </div>
-                <div className="text-slate-400 text-xs flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {formatDate(team.createdAt)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Member count */}
-              <div className="flex items-center gap-4 text-xs text-slate-400 mr-3">
-                <div className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  <span>{team.teamMembers?.length || 0}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => navigate(`/project/${team._id}`)}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 flex items-center gap-1"
-              >
-                <Eye className="w-3 h-3" />
-                Details
-              </button>
-            </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => navigate(`/team/${team._id}`)} className="btn btn-secondary btn-sm">
+              <LayoutDashboard className="h-4 w-4" strokeWidth={1.8} />
+              Dashboard
+            </button>
+            <button onClick={() => navigate(`/team/${team._id}/chat`)} className="btn btn-secondary btn-sm">
+              <MessageSquare className="h-4 w-4" strokeWidth={1.8} />
+              Chat
+            </button>
           </div>
         </div>
-      </div>
+      </article>
     );
   };
 
   if (loadingTeams) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="text-center">
-          <div className="relative mb-6">
-            <div className="w-16 h-16 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin mx-auto" />
-            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-500/20 border-r-blue-500 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-          </div>
-          <div className="text-white font-semibold text-lg mb-2">Loading your teams</div>
-          <div className="text-slate-400">Fetching your collaborative projects...</div>
+      <div className="page">
+        <div className="empty">
+          <span className="spinner" />
+          <p className="empty-text">Loading your teams…</p>
         </div>
       </div>
     );
@@ -178,128 +119,87 @@ export default function MyTeams() {
 
   if (errorTeams) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
-          </div>
-          <div className="text-white font-semibold text-lg mb-2">Unable to load teams</div>
-          <div className="text-slate-400 mb-6">{errorTeams}</div>
-          <button
-            onClick={() => fetchUserTeams()}
-            className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-200"
-          >
-            Try Again
+      <div className="page">
+        <div className="empty">
+          <h3 className="empty-title">Unable to load teams</h3>
+          <p className="empty-text">{errorTeams}</p>
+          <button onClick={() => fetchUserTeams()} className="btn btn-primary mt-5">
+            Try again
           </button>
         </div>
       </div>
     );
   }
 
+  const total = myLeadTeams.length + myMemberTeams.length;
+  const isLeadTab = tab === 'lead';
+  const list = isLeadTab ? myLeadTeams : myMemberTeams;
+
   return (
-    <div className="min-h-screen bg-slate-900">
-      <div className="max-w-6xl mx-auto px-4 py-8 md:px-6 md:py-12">
-        {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-violet-500/20 rounded-xl">
-              <Sparkles className="w-8 h-8 text-violet-400" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white">
-              My Teams
-            </h1>
-          </div>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Manage your collaborative projects and team interactions
+    <div className="page">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Teams</h1>
+          <p className="page-subtitle">
+            {total} {total === 1 ? 'team' : 'teams'} · {myLeadTeams.length} leading, {myMemberTeams.length} joined
           </p>
         </div>
+        <Link to="/newproject" className="btn btn-primary self-start sm:self-auto">
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          New project
+        </Link>
+      </header>
 
-        {/* Teams I Lead */}
-        <section className="mb-16">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-orange-500/20 rounded-xl">
-              <Crown className="w-6 h-6 text-orange-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Teams I Lead</h2>
-              <p className="text-slate-400">Projects where you're the visionary</p>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="px-3 py-1 bg-orange-400/20 text-orange-300 text-sm font-medium rounded-md">
-                {myLeadTeams.length} {myLeadTeams.length === 1 ? 'team' : 'teams'}
-              </span>
-            </div>
-          </div>
-
-          {myLeadTeams.length === 0 ? (
-            <div className="text-center py-16 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur">
-              <div className="max-w-md mx-auto">
-                <div className="w-20 h-20 bg-orange-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
-                  <Crown className="w-10 h-10 text-orange-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Ready to lead?</h3>
-                <p className="text-slate-400 mb-6">You haven't created any teams yet. Start building something amazing!</p>
-                <button
-                  onClick={() => navigate('/create-project')}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-red-700 transition-all duration-200 flex items-center gap-2 mx-auto"
-                >
-                  Create Your First Project
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {myLeadTeams.map(team => (
-                <TeamCard key={team._id} team={team} isLeader={true} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Teams I'm In */}
-        <section>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-blue-500/20 rounded-xl">
-              <Users className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Teams I'm In</h2>
-              <p className="text-slate-400">Collaborative projects you're part of</p>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="px-3 py-1 bg-blue-400/20 text-blue-300 text-sm font-medium rounded-md">
-                {myMemberTeams.length} {myMemberTeams.length === 1 ? 'team' : 'teams'}
-              </span>
-            </div>
-          </div>
-
-          {myMemberTeams.length === 0 ? (
-            <div className="text-center py-16 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur">
-              <div className="max-w-md mx-auto">
-                <div className="w-20 h-20 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
-                  <Users className="w-10 h-10 text-blue-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Join the collaboration</h3>
-                <p className="text-slate-400 mb-6">You're not part of any teams yet. Discover exciting projects to join!</p>
-                <button
-                  onClick={() => navigate('/allideas')}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2 mx-auto"
-                >
-                  Browse Projects
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {myMemberTeams.map(team => (
-                <TeamCard key={team._id} team={team} isLeader={false} />
-              ))}
-            </div>
-          )}
-        </section>
+      <div className="tabs mb-6" role="tablist">
+        <button
+          role="tab"
+          aria-selected={isLeadTab}
+          onClick={() => setTab('lead')}
+          className={`tab ${isLeadTab ? 'tab-active' : ''}`}
+        >
+          Leading <span className="ml-1 font-normal text-subtle">{myLeadTeams.length}</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={!isLeadTab}
+          onClick={() => setTab('member')}
+          className={`tab ${!isLeadTab ? 'tab-active' : ''}`}
+        >
+          Member <span className="ml-1 font-normal text-subtle">{myMemberTeams.length}</span>
+        </button>
       </div>
+
+      {list.length === 0 ? (
+        isLeadTab ? (
+          <div className="empty">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-fg">
+              <Users className="h-8 w-8" strokeWidth={1.5} />
+            </span>
+            <h3 className="empty-title">You're not leading any teams</h3>
+            <p className="empty-text">Create a project to start building a team around it.</p>
+            <button onClick={() => navigate('/newproject')} className="btn btn-outline mt-5">
+              Create your first project
+            </button>
+          </div>
+        ) : (
+          <div className="empty">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-fg">
+              <Compass className="h-8 w-8" strokeWidth={1.5} />
+            </span>
+            <h3 className="empty-title">You haven't joined a team yet</h3>
+            <p className="empty-text">Browse projects and request to join one that fits your skills.</p>
+            <button onClick={() => navigate('/allideas')} className="btn btn-primary mt-5">
+              Browse projects
+            </button>
+          </div>
+        )
+      ) : (
+        <div className="space-y-3">
+          {list.map((team) => (
+            <TeamCard key={team._id} team={team} isLeader={isLeadTab} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

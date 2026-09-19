@@ -1,7 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Lightbulb, User, Tag, Calendar, Heart, MessageCircle, Share2, TrendingUp, Plus } from 'lucide-react';
+import { Search, Compass, Heart, MessageCircle, Share2, Plus, LayoutGrid, List } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
 import { useNavigate } from 'react-router-dom';
+import Avatar from '../components/Avatar';
+
+// Native selects keep keyboard + mobile pickers; this just draws the chevron.
+const selectChevron = {
+  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a8a8a8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+  backgroundPosition: 'right 0.5rem center',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: '1.25em 1.25em',
+};
+
+const countOf = (value) => (Array.isArray(value) ? value.length : (value || 0));
+
+const norm = (value = '') => value.toString().trim().toLowerCase();
+
+// How well a project matches the search text. Skills weigh most, so typing
+// "react" puts projects that need React above ones that merely mention it.
+const relevance = (idea, query) => {
+  if (!query) return 1;
+  const skills = (idea.skillsRequired || []).map(norm);
+  const tags = (idea.tags || []).map(norm);
+  let score = 0;
+  if (skills.includes(query)) score += 10;
+  else if (skills.some((s) => s.includes(query))) score += 6;
+  if (norm(idea.title).includes(query)) score += 5;
+  if (tags.some((t) => t.includes(query))) score += 3;
+  if (norm(idea.createdBy?.username).includes(query) || norm(idea.createdBy?.name).includes(query)) score += 2;
+  if (norm(idea.description).includes(query)) score += 1;
+  return score;
+};
 
 const AllIdeas = () => {
   const navigate = useNavigate();
@@ -10,6 +39,7 @@ const AllIdeas = () => {
   const [selectedTag, setSelectedTag] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [viewMode, setViewMode] = useState('grid');
+  const [selectedSkills, setSelectedSkills] = useState([]); // lower-cased
 
   useEffect(() => {
     getAllIdeas();
@@ -18,28 +48,53 @@ const AllIdeas = () => {
   // Get all unique tags
   const allTags = [...new Set(allIdeas.flatMap(idea => idea.tags || []))];
 
+  // Most-requested skills across all projects, for the quick filter row.
+  // Counted case-insensitively; shown with the first spelling seen.
+  const popularSkills = Object.values(
+    allIdeas.flatMap((idea) => idea.skillsRequired || []).reduce((acc, skill) => {
+      const key = norm(skill);
+      if (key) acc[key] = { key, label: acc[key]?.label || skill.trim(), count: (acc[key]?.count || 0) + 1 };
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 14);
+
+  const toggleSkill = (skill) => {
+    const key = norm(skill);
+    setSelectedSkills((prev) => (prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]));
+  };
+
+  const query = norm(searchTerm);
+
   // Filter and sort ideas
   const filteredIdeas = allIdeas
-    .filter(idea => {
-      const matchesSearch = idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        idea.description.toLowerCase().includes(searchTerm.toLowerCase());
+    .map((idea) => ({ idea, score: relevance(idea, query) }))
+    .filter(({ idea, score }) => {
+      const ideaSkills = (idea.skillsRequired || []).map(norm);
+      const matchesSkills = selectedSkills.every((s) => ideaSkills.includes(s));
       const matchesTag = !selectedTag || (idea.tags && idea.tags.includes(selectedTag));
-      return matchesSearch && matchesTag;
+      return score > 0 && matchesSkills && matchesTag;
     })
     .sort((a, b) => {
+      // While searching, best matches first; the chosen sort breaks ties.
+      if (query && b.score !== a.score) return b.score - a.score;
       switch (sortBy) {
         case 'popular':
-          const aLikes = Array.isArray(a.likes) ? a.likes.length : (a.likes || 0);
-          const bLikes = Array.isArray(b.likes) ? b.likes.length : (b.likes || 0);
-          return bLikes - aLikes;
+          return countOf(b.idea.likes) - countOf(a.idea.likes);
         case 'trending':
-          const aViews = Array.isArray(a.views) ? a.views.length : (a.views || 0);
-          const bViews = Array.isArray(b.views) ? b.views.length : (b.views || 0);
-          return bViews - aViews;
+          return countOf(b.idea.views) - countOf(a.idea.views);
         default:
-          return new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now());
+          return new Date(b.idea.createdAt || Date.now()) - new Date(a.idea.createdAt || Date.now());
       }
-    });
+    })
+    .map(({ idea }) => idea);
+
+  // A skill chip is highlighted when it's a selected filter or matches the search.
+  const isHighlighted = (skill) => {
+    const key = norm(skill);
+    return selectedSkills.includes(key) || (query.length > 1 && key.includes(query));
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently';
@@ -51,271 +106,261 @@ const AllIdeas = () => {
     });
   };
 
-  const getRandomGradient = (index) => {
-    const gradients = [
-      'from-purple-500 to-pink-500',
-      'from-blue-500 to-cyan-500',
-      'from-green-500 to-teal-500',
-      'from-orange-500 to-red-500',
-      'from-indigo-500 to-purple-500',
-      'from-pink-500 to-rose-500'
-    ];
-    return gradients[index % gradients.length];
+  const openIdea = (idea) => navigate(`/project/${idea._id}`);
+
+  const [copiedId, setCopiedId] = useState(null);
+  const shareIdea = async (idea) => {
+    const url = `${window.location.origin}/project/${idea._id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(idea._id);
+      setTimeout(() => setCopiedId((id) => (id === idea._id ? null : id)), 2000);
+    } catch {
+      window.prompt('Copy this link:', url);
+    }
   };
 
-  const IdeaCard = ({ idea, index }) => (
-    <div className="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 hover:-translate-y-1">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className={`w-12 h-12 bg-gradient-to-br ${getRandomGradient(index)} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-            <Lightbulb className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-200">
-              {idea.title}
-            </h3>
-            <div className="flex items-center space-x-2 text-gray-400 text-sm mt-1">
-              <User className="w-4 h-4" />
-              <span>{idea.createdBy?.name || 'Anonymous'}</span>
-              <span>•</span>
-              <Calendar className="w-4 h-4" />
-              <span>{formatDate(idea.createdAt)}</span>
-            </div>
-          </div>
-        </div>
-        <button className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 hover:bg-gray-700/50 rounded-lg">
-          <Share2 className="w-4 h-4 text-gray-400 hover:text-white" />
-        </button>
-      </div>
+  const hasFilters = searchTerm || selectedTag || selectedSkills.length > 0 || sortBy !== 'recent';
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedTag('');
+    setSelectedSkills([]);
+    setSortBy('recent');
+  };
 
-      {/* Description */}
-      <p className="text-gray-300 leading-relaxed mb-4 line-clamp-3">
-        {idea.description}
-      </p>
+  // Skills are the most useful thing to scan for; fall back to tags when a project has none.
+  const chipsFor = (idea) => (idea.skillsRequired?.length ? idea.skillsRequired : idea.tags || []);
 
-      {/* Tags */}
-      {idea.tags && idea.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {idea.tags.slice(0, 3).map((tag, tagIndex) => (
-            <span
-              key={tagIndex}
-              className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30 hover:bg-purple-500/30 transition-colors duration-200 cursor-pointer"
-            >
-              {tag}
-            </span>
-          ))}
-          {idea.tags.length > 3 && (
-            <span className="px-3 py-1 bg-gray-700/50 text-gray-400 rounded-full text-sm">
-              +{idea.tags.length - 3} more
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-700/30">
-        <div className="flex items-center space-x-4">
-          <button className="flex items-center space-x-2 text-gray-400 hover:text-red-400 transition-colors duration-200">
-            <Heart className="w-4 h-4" />
-            <span className="text-sm">{Array.isArray(idea.likes) ? idea.likes.length : (idea.likes || 0)}</span>
-          </button>
-          <button className="flex items-center space-x-2 text-gray-400 hover:text-blue-400 transition-colors duration-200">
-            <MessageCircle className="w-4 h-4" />
-            <span className="text-sm">{Array.isArray(idea.comments) ? idea.comments.length : (idea.comments || 0)}</span>
-          </button>
-          <div className="flex items-center space-x-2 text-gray-400">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-sm">{Array.isArray(idea.views) ? idea.views.length : (idea.views || 0)} views</span>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate(`/project/${idea._id}`)}
-          className="px-4 py-2 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 border border-purple-500/30 transition-all duration-200 text-sm font-medium">
-          View Details
-        </button>
-      </div>
-    </div>
+  const Counts = ({ idea }) => (
+    <span className="flex shrink-0 items-center gap-3 text-xs text-subtle">
+      <span className="inline-flex items-center gap-1" aria-label={`${countOf(idea.likes)} likes`}>
+        <Heart className="h-3.5 w-3.5" strokeWidth={2} />
+        {countOf(idea.likes)}
+      </span>
+      <span className="inline-flex items-center gap-1" aria-label={`${countOf(idea.comments)} comments`}>
+        <MessageCircle className="h-3.5 w-3.5 -scale-x-100" strokeWidth={2} />
+        {countOf(idea.comments)}
+      </span>
+    </span>
   );
 
-  const ListView = () => (
-    <div className="space-y-4">
-      {filteredIdeas.map((idea, index) => (
-        <div key={idea._id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300">
-          <div className="flex items-start space-x-4">
-            <div className={`w-16 h-16 bg-gradient-to-br ${getRandomGradient(index)} rounded-xl flex items-center justify-center flex-shrink-0`}>
-              <Lightbulb className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-xl font-semibold text-white truncate">{idea.title}</h3>
-                <div className="flex items-center space-x-2 ml-4">
-                  <button className="flex items-center space-x-1 text-gray-400 hover:text-red-400 transition-colors duration-200">
-                    <Heart className="w-4 h-4" />
-                    <span className="text-sm">{Array.isArray(idea.likes) ? idea.likes.length : (idea.likes || 0)}</span>
-                  </button>
-                  <button className="flex items-center space-x-1 text-gray-400 hover:text-blue-400 transition-colors duration-200">
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="text-sm">{Array.isArray(idea.comments) ? idea.comments.length : (idea.comments || 0)}</span>
-                  </button>
-                </div>
-              </div>
-              <p className="text-gray-300 mb-3 line-clamp-2">{idea.description}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 text-gray-400 text-sm">
-                  <div className="flex items-center space-x-1">
-                    <User className="w-4 h-4" />
-                    <span>{idea.createdBy?.name || 'Anonymous'}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>{formatDate(idea.createdAt)}</span>
-                  </div>
-                  {idea.tags && idea.tags.length > 0 && (
-                    <div className="flex items-center space-x-1">
-                      <Tag className="w-4 h-4" />
-                      <span>{idea.tags.slice(0, 2).join(', ')}</span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => navigate(`/project/${idea._id}`)}
-                  className="px-4 py-2 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 border border-purple-500/30 transition-all duration-200 text-sm font-medium">
-                  View Details
-                </button>
-              </div>
-            </div>
-          </div>
+  const IdeaCard = ({ idea }) => {
+    // Matching skills first, so the reason a project showed up is visible.
+    const chips = [...chipsFor(idea)].sort((a, b) => isHighlighted(b) - isHighlighted(a));
+    const areSkills = Boolean(idea.skillsRequired?.length);
+    return (
+      <article
+        role="link"
+        tabIndex={0}
+        onClick={() => openIdea(idea)}
+        onKeyDown={(e) => { if (e.key === 'Enter') openIdea(idea); }}
+        className="card card-hover group flex cursor-pointer flex-col p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link"
+      >
+        <div className="flex items-start gap-2">
+          <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-fg group-hover:underline">
+            {idea.title}
+          </h3>
+          {copiedId === idea._id && <span className="text-xs text-muted">Link copied</span>}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              shareIdea(idea);
+            }}
+            className="icon-btn -mr-1.5 -mt-1 text-muted"
+            aria-label="Copy link"
+          >
+            <Share2 className="h-4 w-4" strokeWidth={1.8} />
+          </button>
         </div>
+
+        <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-muted">{idea.description}</p>
+
+        {chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {chips.slice(0, 3).map((chip) =>
+              areSkills ? (
+                <button
+                  key={chip}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSkill(chip);
+                  }}
+                  className={`${isHighlighted(chip) ? 'chip-accent' : 'chip'} hover:border-line-strong`}
+                  title={`Show projects that need ${chip}`}
+                >
+                  {chip}
+                </button>
+              ) : (
+                <span key={chip} className="chip">{chip}</span>
+              )
+            )}
+            {chips.length > 3 && <span className="chip text-muted">+{chips.length - 3} more</span>}
+          </div>
+        )}
+
+        <div className="mt-auto flex items-center gap-2 pt-4">
+          <Avatar src={idea.createdBy?.avatar} name={idea.createdBy?.name} size="xs" />
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-fg">
+            {idea.createdBy?.username || idea.createdBy?.name || 'anonymous'}
+          </span>
+          <Counts idea={idea} />
+        </div>
+      </article>
+    );
+  };
+
+  const ListView = () => (
+    <div className="card divide-y divide-line">
+      {filteredIdeas.map((idea) => (
+        <button
+          key={idea._id}
+          onClick={() => openIdea(idea)}
+          className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-surface-2"
+        >
+          <Avatar src={idea.createdBy?.avatar} name={idea.createdBy?.name} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-3">
+              <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{idea.title}</h3>
+              <Counts idea={idea} />
+            </div>
+            <p className="mt-0.5 line-clamp-2 text-sm text-muted">{idea.description}</p>
+            <p className="mt-1 truncate text-xs text-subtle">
+              {idea.createdBy?.username || idea.createdBy?.name || 'anonymous'} · {formatDate(idea.createdAt)}
+              {chipsFor(idea).length > 0 && ` · ${chipsFor(idea).slice(0, 3).join(', ')}`}
+            </p>
+          </div>
+        </button>
       ))}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent mb-2">
-                💡 All Ideas
-              </h1>
-              <p className="text-gray-400 text-lg">
-                Discover innovative ideas from our community
-              </p>
-            </div>
-            <button className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-lg hover:shadow-purple-500/25">
-              <Plus className="w-4 h-4" />
-              <span>Add New Idea</span>
+    <div className="page">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Explore</h1>
+          <p className="page-subtitle">
+            {selectedSkills.length > 0
+              ? `${filteredIdeas.length} ${filteredIdeas.length === 1 ? 'project needs' : 'projects need'} ${selectedSkills
+                  .map((k) => popularSkills.find((p) => p.key === k)?.label || k)
+                  .join(' + ')}`
+              : `Browse every project on InnoMate · ${filteredIdeas.length} ${filteredIdeas.length === 1 ? 'project' : 'projects'}`}
+          </p>
+        </div>
+        <button onClick={() => navigate('/newproject')} className="btn btn-primary self-start sm:self-auto">
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          New project
+        </button>
+      </header>
+
+      {/* Search + filters */}
+      <div className="mb-8 space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+          <input
+            type="text"
+            placeholder="Search by skill, project or person — e.g. React"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+            className="input w-auto max-w-full cursor-pointer appearance-none pr-8"
+            style={selectChevron}
+            aria-label="Filter by category"
+          >
+            <option value="">All categories</option>
+            {allTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="input w-auto cursor-pointer appearance-none pr-8"
+            style={selectChevron}
+            aria-label="Sort"
+          >
+            <option value="recent">Most recent</option>
+            <option value="popular">Most popular</option>
+            <option value="trending">Trending</option>
+          </select>
+          {hasFilters && (
+            <button onClick={clearFilters} className="link-btn ml-1">
+              Clear
+            </button>
+          )}
+
+          <div className="ml-auto flex items-center gap-1" role="group" aria-label="View">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`icon-btn ${viewMode === 'grid' ? 'text-fg' : 'text-subtle'}`}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              <LayoutGrid className="h-5 w-5" strokeWidth={1.8} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`icon-btn ${viewMode === 'list' ? 'text-fg' : 'text-subtle'}`}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+            >
+              <List className="h-5 w-5" strokeWidth={1.8} />
             </button>
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-white">{allIdeas.length}</div>
-              <div className="text-gray-400 text-sm">Total Ideas</div>
-            </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-white">{allTags.length}</div>
-              <div className="text-gray-400 text-sm">Categories</div>
-            </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-white">{filteredIdeas.length}</div>
-              <div className="text-gray-400 text-sm">Filtered Results</div>
-            </div>
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-white">
-                {[...new Set(allIdeas.map(idea => idea.createdBy?.name).filter(Boolean))].length}
-              </div>
-              <div className="text-gray-400 text-sm">Contributors</div>
-            </div>
-          </div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search ideas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
-              />
-            </div>
-
-            {/* Tag Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                className="pl-10 pr-8 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-white focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 appearance-none min-w-[200px]"
-              >
-                <option value="">All Categories</option>
-                {allTags.map(tag => (
-                  <option key={tag} value={tag}>{tag}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-white focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 appearance-none"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="popular">Most Popular</option>
-              <option value="trending">Trending</option>
-            </select>
-
-            {/* View Mode */}
-            <div className="flex bg-gray-700/50 rounded-xl p-1 border border-gray-600/50">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 ${viewMode === 'grid'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Grid
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 ${viewMode === 'list'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                List
-              </button>
-            </div>
+        {popularSkills.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="mr-1 text-xs font-semibold text-muted">Skills</span>
+            {popularSkills.map(({ key, label, count }) => {
+              const active = selectedSkills.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleSkill(label)}
+                  aria-pressed={active}
+                  className={`${active ? 'chip-accent' : 'chip'} cursor-pointer transition-colors hover:border-line-strong`}
+                >
+                  {label}
+                  <span className={active ? 'text-link/70' : 'text-subtle'}>{count}</span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-
-        {/* Ideas Display */}
-        {filteredIdeas.length === 0 ? (
-          <div className="text-center py-16">
-            <Lightbulb className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No ideas found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredIdeas.map((idea, index) => (
-              <IdeaCard key={idea._id} idea={idea} index={index} />
-            ))}
-          </div>
-        ) : (
-          <ListView />
         )}
       </div>
+
+      {/* Ideas display */}
+      {filteredIdeas.length === 0 ? (
+        <div className="empty">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-fg">
+            <Compass className="h-8 w-8" strokeWidth={1.5} />
+          </span>
+          <h3 className="empty-title">{hasFilters ? 'No matching projects' : 'No projects yet'}</h3>
+          <p className="empty-text">
+            {hasFilters ? 'Try a different search or category.' : 'Projects shared by the community will show up here.'}
+          </p>
+          {hasFilters && (
+            <button onClick={clearFilters} className="btn btn-secondary mt-5">
+              Clear filters
+            </button>
+          )}
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredIdeas.map((idea) => (
+            <IdeaCard key={idea._id} idea={idea} />
+          ))}
+        </div>
+      ) : (
+        <ListView />
+      )}
     </div>
   );
 };

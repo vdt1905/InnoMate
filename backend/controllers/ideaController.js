@@ -2,6 +2,7 @@ import { Idea } from '../models/Idea.js';
 import { User } from '../models/user.model.js';
 import { Message } from '../models/Message.js';
 import { JoinRequest } from '../models/JoinRequest.js';
+import { Notification } from '../models/Notification.js';
 
 // Owner or accepted member. Used to gate anything team-private.
 const isTeamMember = (idea, userId) => {
@@ -54,6 +55,14 @@ export const createIdea = async (req, res) => {
         maxTeamSize: hackathon.maxTeamSize,
         description: hackathon.description
       };
+    } else if (hackathon?.maxTeamSize) {
+      // Personal projects may cap their team size too. The cap lives in the
+      // same field as a hackathon's, so join-request checks treat them alike.
+      const size = Number(hackathon.maxTeamSize);
+      if (!Number.isInteger(size) || size < 2 || size > 50) {
+        return res.status(400).json({ message: 'Team size must be a whole number between 2 and 50' });
+      }
+      newIdea.hackathon = { isHackathon: false, maxTeamSize: size };
     }
 
     const savedIdea = await newIdea.save();
@@ -229,7 +238,8 @@ export const deleteIdea = async (req, res) => {
     await Promise.all([
       idea.deleteOne(),
       JoinRequest.deleteMany({ ideaId: idea._id }),
-      Message.deleteMany({ teamId: idea._id })
+      Message.deleteMany({ teamId: idea._id }),
+      Notification.deleteMany({ idea: idea._id })
     ]);
 
     res.status(200).json({ message: 'Idea deleted successfully' });

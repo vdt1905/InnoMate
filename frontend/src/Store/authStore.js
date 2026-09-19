@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import axios from '../api/axiosInstance';
+import { disconnectSocket } from '../api/socket';
 
 const FIREBASE_AUTH_MESSAGES = {
   'auth/invalid-credential': 'Incorrect email or password.',
   'auth/wrong-password': 'Incorrect email or password.',
   'auth/user-not-found': 'No account found with that email.',
   'auth/invalid-email': 'That email address is not valid.',
+  'auth/weak-password': 'Password must be at least 6 characters.',
   'auth/user-disabled': 'This account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.',
   'auth/network-request-failed': 'Network error — check your connection and try again.',
@@ -42,6 +44,11 @@ const useAuthStore = create((set, get) => ({
   myMemberTeams: [],     // teams where I'm just a member
   loadingTeams: false,
   errorTeams: null,
+  notifications: [],
+  unreadNotifications: 0,
+  inviteIdByIdea: {},    // { [ideaId]: joinRequestId } for invites waiting on you
+  conversations: [],     // direct-message inbox, newest first
+  loadingConversations: false,
 
 
   get isAuthenticated() {
@@ -245,7 +252,90 @@ const useAuthStore = create((set, get) => ({
     } catch (err) {
       console.warn('Logout failed on server.');
     }
-    set({ user: null });
+    disconnectSocket();
+    set({ user: null, conversations: [], notifications: [], unreadNotifications: 0 });
+  },
+
+  // ---- NOTIFICATIONS & INVITES ----
+  fetchNotifications: async () => {
+    try {
+      const { data } = await axios.get('/notifications');
+      set({ notifications: data.notifications || [], unreadNotifications: data.unread || 0 });
+    } catch (err) {
+      console.error('Failed to load notifications', err);
+    }
+  },
+
+  markNotificationsRead: async () => {
+    if (!get().unreadNotifications) return;
+    set((state) => ({
+      unreadNotifications: 0,
+      notifications: state.notifications.map((n) => ({ ...n, read: true })),
+    }));
+    try {
+      await axios.post('/notifications/read');
+    } catch {
+      // Harmless: they'll just show as unread again next load.
+    }
+  },
+
+  inviteToProject: async (ideaId, userId) => {
+    try {
+      const { data } = await axios.post(`/ideas/${ideaId}/invite`, { userId });
+      return { ok: true, message: data.message, joined: Boolean(data.joined) };
+    } catch (err) {
+      return { ok: false, error: err.response?.data?.message || 'Could not send invite' };
+    }
+  },
+
+  // accept: true to join, false to decline. Refreshes everything it affects.
+  respondToInvite: async (requestId, accept) => {
+    try {
+      const { data } = await axios.post(`/ideas/invites/${requestId}/${accept ? 'accept' : 'decline'}`);
+      await Promise.all([get().fetchNotifications(), accept ? get().fetchUserTeams() : null]);
+      if (data.ideaId) await get().getJoinRequestStatus(data.ideaId);
+      return { ok: true, message: data.message, ideaId: data.ideaId };
+    } catch (err) {
+      await get().fetchNotifications();
+      return { ok: false, error: err.response?.data?.message || 'Something went wrong' };
+    }
+  },
+
+  // Leader answering a join request from the notification panel.
+  respondToJoinRequest: async (ideaId, requestId, accept) => {
+    const result = accept
+      ? await get().acceptJoinRequest(ideaId, requestId)
+      : await get().rejectJoinRequest(ideaId, requestId);
+    await get().fetchNotifications();
+    return result;
+  },
+
+  // ---- DIRECT MESSAGES ----
+  fetchConversations: async () => {
+    set({ loadingConversations: true });
+    try {
+      const { data } = await axios.get('/messages/conversations');
+      set({ conversations: data || [], loadingConversations: false });
+    } catch (err) {
+      console.error('Failed to load conversations', err);
+      set({ loadingConversations: false });
+    }
+  },
+
+  // Returns the conversation id with that user, creating it if needed.
+  openConversation: async (userId) => {
+    try {
+      const { data } = await axios.post('/messages/conversations', { userId });
+      return { ok: true, id: data._id };
+    } catch (err) {
+      return { ok: false, error: err.response?.data?.message || 'Could not open conversation' };
+    }
+  },
+
+  markConversationRead: (conversationId) => {
+    set((state) => ({
+      conversations: state.conversations.map((c) => (c._id === conversationId ? { ...c, unread: false } : c)),
+    }));
   },
   // src/Store/authStore.js
   getAllIdeas: async () => {
@@ -397,8 +487,11 @@ const useAuthStore = create((set, get) => ({
   getJoinRequestStatus: async (ideaId) => {
     try {
       const { data } = await axios.get(`/ideas/${ideaId}/join-request/status`);
+      // A pending invite is its own state for the UI: "Accept invite", not "Pending".
+      const invited = data?.type === 'invite' && data?.status === 'pending';
       set((state) => ({
-        joinStatusByIdea: { ...state.joinStatusByIdea, [ideaId]: data?.status || null },
+        joinStatusByIdea: { ...state.joinStatusByIdea, [ideaId]: invited ? 'invited' : (data?.status || null) },
+        inviteIdByIdea: { ...state.inviteIdByIdea, [ideaId]: invited ? data.request._id : undefined },
       }));
       return { ok: true, status: data?.status, data };
     } catch (err) {

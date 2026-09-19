@@ -1,115 +1,152 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Users, Crown, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MessageCircle, ChevronRight, PenSquare } from 'lucide-react';
 import useAuthStore from '../Store/authStore';
+import { getSocket } from '../api/socket';
+import Avatar from '../components/Avatar';
+
+const timeAgo = (date) => {
+  const mins = Math.floor((Date.now() - new Date(date)) / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return `${Math.floor(days / 7)}w`;
+};
+
+const EmptyState = ({ title, text, action, onAction }) => (
+  <div className="empty">
+    <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-fg">
+      <MessageCircle className="h-8 w-8 -scale-x-100" strokeWidth={1.5} />
+    </span>
+    <h3 className="empty-title">{title}</h3>
+    <p className="empty-text">{text}</p>
+    <button onClick={onAction} className="btn btn-primary mt-5">{action}</button>
+  </div>
+);
+
+const rowClass =
+  'group -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors hover:bg-surface-2';
 
 export default function ChatList() {
-    const navigate = useNavigate();
-    const {
-        user,
-        fetchUser,
-        fetchUserTeams,
-        myLeadTeams,
-        myMemberTeams,
-        loadingTeams,
-        errorTeams,
-    } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === 'teams' ? 'teams' : 'direct';
 
-    useEffect(() => {
-        const initializeData = async () => {
-            if (!user) await fetchUser();
-            await fetchUserTeams();
-        };
-        initializeData();
-    }, [fetchUser, fetchUserTeams, user]);
+  const {
+    user,
+    fetchUserTeams,
+    myLeadTeams,
+    myMemberTeams,
+    conversations,
+    fetchConversations,
+  } = useAuthStore();
 
-    const allTeams = [...myLeadTeams, ...myMemberTeams];
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    Promise.all([fetchConversations(), fetchUserTeams()]).finally(() => setLoaded(true));
+  }, [fetchConversations, fetchUserTeams]);
 
-    const getInitials = (name) => {
-        if (!name) return 'GP';
-        return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
-    };
+  // New messages reorder the inbox and update previews live.
+  useEffect(() => {
+    const socket = getSocket();
+    const refresh = () => fetchConversations();
+    socket.on('dm:message', refresh);
+    return () => socket.off('dm:message', refresh);
+  }, [fetchConversations]);
 
-    if (loadingTeams) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-900">
-                <div className="text-center">
-                    <div className="relative mb-6">
-                        <div className="w-16 h-16 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin mx-auto" />
-                    </div>
-                    <div className="text-white font-semibold text-lg mb-2">Loading your chats</div>
-                </div>
-            </div>
-        );
-    }
+  const allTeams = [...myLeadTeams, ...myMemberTeams];
+  const leadIds = new Set(myLeadTeams.map((team) => team._id));
+  const unreadCount = conversations.filter((c) => c.unread).length;
 
-    return (
-        <div className="min-h-screen bg-slate-900">
-            <div className="max-w-4xl mx-auto px-6 py-12">
-                <div className="text-center mb-12">
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="p-3 bg-violet-500/20 rounded-xl">
-                            <MessageSquare className="w-8 h-8 text-violet-400" />
-                        </div>
-                        <h1 className="text-4xl font-bold text-white">
-                            Messages
-                        </h1>
-                    </div>
-                    <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-                        Connect and collaborate with your team members
-                    </p>
-                </div>
-
-                {allTeams.length === 0 ? (
-                    <div className="text-center py-16 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur">
-                        <div className="max-w-md mx-auto">
-                            <div className="w-20 h-20 bg-slate-700/50 rounded-xl flex items-center justify-center mx-auto mb-6">
-                                <MessageSquare className="w-10 h-10 text-slate-400" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-white mb-3">No conversations yet</h3>
-                            <p className="text-slate-400 mb-6">Join a team to start chatting!</p>
-                            <button
-                                onClick={() => navigate('/allideas')}
-                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200"
-                            >
-                                Find Teams
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid gap-4">
-                        {allTeams.map(team => (
-                            <div
-                                key={team._id}
-                                onClick={() => navigate(`/team/${team._id}/chat`)}
-                                className="group p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-violet-500/30 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-4"
-                            >
-                                <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg shadow-violet-900/20">
-                                    {getInitials(team.title)}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h3 className="text-white font-semibold truncate group-hover:text-violet-300 transition-colors">
-                                            {team.title}
-                                        </h3>
-                                        <span className="text-xs text-slate-500 bg-slate-900/50 px-2 py-1 rounded">
-                                            {team.teamMembers?.length || 0} members
-                                        </span>
-                                    </div>
-                                    <p className="text-slate-400 text-sm truncate">
-                                        {team.description || 'No description available'}
-                                    </p>
-                                </div>
-
-                                <div className="text-slate-500 group-hover:text-violet-400 transition-colors">
-                                    <ArrowRight className="w-5 h-5" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+  return (
+    <div className="page-narrow">
+      <header className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="page-title">Messages</h1>
+          <p className="page-subtitle">Talk to people directly, or with your whole team.</p>
         </div>
-    );
+        <button onClick={() => navigate('/search-peers')} className="btn btn-secondary btn-sm shrink-0" title="Find someone to message">
+          <PenSquare className="h-4 w-4" strokeWidth={1.8} />
+          New message
+        </button>
+      </header>
+
+      <div className="tabs mb-2">
+        <button onClick={() => setSearchParams({})} className={`tab ${tab === 'direct' ? 'tab-active' : ''}`}>
+          Direct{unreadCount > 0 && <span className="ml-1.5 text-link">{unreadCount}</span>}
+        </button>
+        <button onClick={() => setSearchParams({ tab: 'teams' })} className={`tab ${tab === 'teams' ? 'tab-active' : ''}`}>
+          Teams <span className="ml-1 text-subtle">{allTeams.length}</span>
+        </button>
+      </div>
+
+      {!loaded ? (
+        <div className="empty"><span className="spinner" /></div>
+      ) : tab === 'direct' ? (
+        conversations.length === 0 ? (
+          <EmptyState
+            title="No messages yet"
+            text="Find someone with the skills you need and send them a message."
+            action="Find people"
+            onAction={() => navigate('/search-peers')}
+          />
+        ) : (
+          <ul>
+            {conversations.map((c) => {
+              const fromMe = c.lastMessage?.sender === user?._id;
+              return (
+                <li key={c._id}>
+                  <button onClick={() => navigate(`/chat/${c._id}`)} className={rowClass}>
+                    <Avatar src={c.other?.avatar} name={c.other?.name} size="lg" />
+                    <div className="min-w-0 flex-1">
+                      <p className={`truncate text-sm text-fg ${c.unread ? 'font-bold' : 'font-semibold'}`}>
+                        {c.other?.name}
+                      </p>
+                      <p className={`flex gap-1 text-sm ${c.unread ? 'font-semibold text-fg' : 'text-muted'}`}>
+                        <span className="truncate">
+                          {fromMe && 'You: '}{c.lastMessage?.text}
+                        </span>
+                        <span className="shrink-0 text-subtle">· {timeAgo(c.lastMessage?.createdAt)}</span>
+                      </p>
+                    </div>
+                    {c.unread && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-link" aria-label="Unread" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      ) : allTeams.length === 0 ? (
+        <EmptyState
+          title="No team chats"
+          text="Join or start a project to chat with its team."
+          action="Find teams"
+          onAction={() => navigate('/allideas')}
+        />
+      ) : (
+        <ul>
+          {allTeams.map((team) => {
+            const memberCount = team.teamMembers?.length || 0;
+            return (
+              <li key={team._id}>
+                <button onClick={() => navigate(`/team/${team._id}/chat`)} className={rowClass}>
+                  <Avatar name={team.title} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-fg">{team.title}</p>
+                    <p className="truncate text-sm text-muted">
+                      {leadIds.has(team._id) ? 'Leader' : 'Member'} · {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-subtle transition-colors group-hover:text-fg" strokeWidth={1.8} />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
